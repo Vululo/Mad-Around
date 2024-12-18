@@ -15,6 +15,10 @@ Una aplicación para encontrar fuentes de agua cercanas en su ciudad, ya sea par
 
 [Visita el figma](https://www.figma.com/design/y6SO0lJ3bDAyEqmhDfegK7/FontWay?node-id=0-1&p=f&t=5FkMIhLwzE9Z5xBi-0)
 
+## 👷 Trello
+
+[Tablero de trello](https://trello.com/b/XmIDBFjQ/proyecto-integrador)
+
 ## 🧑‍💻 Créditos
 
 Proyecto realizado por:
