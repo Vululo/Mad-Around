@@ -25,4 +25,4 @@ Proyecto realizado por:
 
 - **Kevin Luis Laurente**
 - **Armando Granados**
-- **Bruno Veiga**
+- **Bruno Veiga GitHub Master**
