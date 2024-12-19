@@ -23,6 +23,6 @@ Una aplicación para encontrar fuentes de agua cercanas en su ciudad, ya sea par
 
 Proyecto realizado por:
 
-- **Kevin Luis Laurente Designer**
-- **Armando Granados Scrum Master**
-- **Bruno Veiga GitHub Master**
+- **Kevin Luis Laurente as Designer**
+- **Armando Granados as Scrum Master**
+- **Bruno Veiga as GitHub Master**
