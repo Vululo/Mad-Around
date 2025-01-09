@@ -1,15 +1,12 @@
 # Fontway
-<img src="app/src/main/res/drawable/logo.png" alt="Prototipo del main" style="width:200px; height:auto;">
 
-Una aplicación para encontrar fuentes de agua cercanas en su ciudad, ya sea para su perro o para ti
-
-
+Una aplicación para encontrar fuentes de agua cercanas en su ciudad, ya sea para tu perro o para ti
 
 >**Proyecto Integrador DAM2 24/25**
 
 ## 🚀 Cáracteristicas
 
-- 🌍 Encuentra fuentes para personas o animales por su zona.
+- 🌍 Encuentra fuentes para personas o animales por tu zona.
 - 💧 Información sobre el estado de la fuente (En mantenimiento, disponible, etc).
 
 ## 💡 Figma
