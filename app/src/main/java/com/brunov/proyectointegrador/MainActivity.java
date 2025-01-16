@@ -1,7 +1,6 @@
 package com.brunov.proyectointegrador;
 
 import android.content.pm.PackageManager;
-import android.health.connect.datatypes.ExerciseRoute;
 import android.location.Location;
 import android.os.Bundle;
 
