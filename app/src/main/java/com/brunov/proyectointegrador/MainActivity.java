@@ -14,6 +14,8 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.brunov.proyectointegrador.api.ApiClient;
+import com.brunov.proyectointegrador.api.ApiService;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -22,11 +24,19 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.Task;
 
 import android.Manifest;
+import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
+
+import java.util.List;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback {
     private GoogleMap Map;
@@ -37,6 +47,30 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
+
+
+        /*ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
+        // Llamar al endpoint
+        Call<List<Fuentes>> call = apiService.getFuentes();
+        call.enqueue(new Callback<List<Fuentes>>() {
+            @Override
+            public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    // Manejar los datos recibidos
+                    List<Fuentes> fuentes = response.body();
+                    for (Fuentes fuente : fuentes) {
+                        Log.d("API Response", "Fuente: " + fuente.getNomVia() + " - " + fuente.getLatitud() + ", " + fuente.getLongitud());
+                    }
+                } else {
+                    Log.e("API Response", "Error en la respuesta: " + response.code());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<Fuentes>> call, Throwable t) {
+                Log.e("API Error", t.getMessage());
+            }
+        });*/
 
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
@@ -76,6 +110,32 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         Map.setMaxZoomPreference(17);
         // Solicitar permisos
         requestLocationPermission();
+
+
+        ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
+        apiService.getFuentes().enqueue(new Callback<List<Fuentes>>() {
+            @Override
+            public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    Log.d("API Response", "Datos recibidos: " + response.body().toString());
+                    List<Fuentes> fuentes = response.body();
+                    for (Fuentes fuente : fuentes) {
+                        Log.d("API Response", "Fuente: " + fuente.getNomVia() + " - " + fuente.getLatitud() + ", " + fuente.getLongitud());
+                    }
+                    for (Fuentes fuente : response.body()) {
+                        LatLng latLng = new LatLng(fuente.getLatitud(), fuente.getLongitud());
+                        Map.addMarker(new MarkerOptions()
+                                .position(latLng)
+                                .title(fuente.getNomVia()));
+                    }
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<Fuentes>> call, Throwable t) {
+                t.printStackTrace(); // Manejo de errores
+            }
+        });
     }
 
     private void getDeviceLocation(){
