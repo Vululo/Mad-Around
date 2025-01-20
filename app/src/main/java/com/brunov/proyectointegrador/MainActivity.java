@@ -32,6 +32,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import retrofit2.Call;
@@ -41,36 +42,13 @@ import retrofit2.Response;
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback {
     private GoogleMap Map;
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
+    private static final int RADIUS_METERS = 2000; // Radio en metros (2 km)
     private FusedLocationProviderClient fusedLocationProviderClient;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
-
-
-        /*ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
-        // Llamar al endpoint
-        Call<List<Fuentes>> call = apiService.getFuentes();
-        call.enqueue(new Callback<List<Fuentes>>() {
-            @Override
-            public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    // Manejar los datos recibidos
-                    List<Fuentes> fuentes = response.body();
-                    for (Fuentes fuente : fuentes) {
-                        Log.d("API Response", "Fuente: " + fuente.getNomVia() + " - " + fuente.getLatitud() + ", " + fuente.getLongitud());
-                    }
-                } else {
-                    Log.e("API Response", "Error en la respuesta: " + response.code());
-                }
-            }
-
-            @Override
-            public void onFailure(Call<List<Fuentes>> call, Throwable t) {
-                Log.e("API Error", t.getMessage());
-            }
-        });*/
 
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
@@ -117,17 +95,22 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             @Override
             public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    Log.d("API Response", "Datos recibidos: " + response.body().toString());
                     List<Fuentes> fuentes = response.body();
-                    for (Fuentes fuente : fuentes) {
-                        Log.d("API Response", "Fuente: " + fuente.getNomVia() + " - " + fuente.getLatitud() + ", " + fuente.getLongitud());
-                    }
-                    for (Fuentes fuente : response.body()) {
-                        LatLng latLng = new LatLng(fuente.getLatitud(), fuente.getLongitud());
-                        Map.addMarker(new MarkerOptions()
-                                .position(latLng)
-                                .title(fuente.getNomVia()));
-                    }
+
+                    // Esperar a que se obtenga la ubicación del usuario
+                    getDeviceLocation(); // Este método ya está implementado en tu código
+                    Map.setOnMyLocationChangeListener(location -> {
+                        // Filtrar las fuentes cercanas
+                        List<Fuentes> fuentesCercanas = filtrarFuentesCercanas(fuentes, location);
+
+                        // Añadir marcadores al mapa
+                        for (Fuentes fuente : fuentesCercanas) {
+                            LatLng latLng = new LatLng(fuente.getLatitud(), fuente.getLongitud());
+                            Map.addMarker(new MarkerOptions()
+                                    .position(latLng)
+                                    .title(fuente.getNomVia()));
+                        }
+                    });
                 }
             }
 
@@ -136,6 +119,22 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 t.printStackTrace(); // Manejo de errores
             }
         });
+    }
+    // Método para filtrar fuentes cercanas
+    private List<Fuentes> filtrarFuentesCercanas(List<Fuentes> fuentes, Location userLocation) {
+        List<Fuentes> fuentesCercanas = new ArrayList<>();
+        for (Fuentes fuente : fuentes) {
+            Location fuenteLocation = new Location("");
+            fuenteLocation.setLatitude(fuente.getLatitud());
+            fuenteLocation.setLongitude(fuente.getLongitud());
+
+            // Calcula la distancia entre el usuario y la fuente
+            float distancia = userLocation.distanceTo(fuenteLocation);
+            if (distancia <= RADIUS_METERS) { // Radio de 2 km
+                fuentesCercanas.add(fuente);
+            }
+        }
+        return fuentesCercanas;
     }
 
     private void getDeviceLocation(){
