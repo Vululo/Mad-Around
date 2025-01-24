@@ -22,6 +22,7 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.MarkerOptions;
@@ -30,9 +31,13 @@ import com.google.android.gms.tasks.Task;
 import android.Manifest;
 import android.util.Log;
 import android.view.View;
+import android.widget.EditText;
+import android.widget.SearchView;
 import android.widget.Toast;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -48,29 +53,45 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
+        SearchView searchView = findViewById(R.id.busqueda);
 
-        /*ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
-        // Llamar al endpoint
-        Call<List<Fuentes>> call = apiService.getFuentes();
-        call.enqueue(new Callback<List<Fuentes>>() {
+        ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
+        apiService.getFuentes().enqueue(new Callback<List<Fuentes>>() {
             @Override
             public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    // Manejar los datos recibidos
-                    List<Fuentes> fuentes = response.body();
-                    for (Fuentes fuente : fuentes) {
-                        Log.d("API Response", "Fuente: " + fuente.getNomVia() + " - " + fuente.getLatitud() + ", " + fuente.getLongitud());
+                List<Fuentes>fuente=response.body();
+                searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+                    @Override
+                    public boolean onQueryTextSubmit(String query) {
+                        Map.clear();
+                        // Acción cuando el usuario envía la búsqueda
+                        for(Fuentes fuentes:fuente){
+                            if (query != null && query.equalsIgnoreCase(fuentes.getBarrio())) {
+                                LatLng latLng = new LatLng(fuentes.getLatitud(), fuentes.getLongitud());
+                                Map.addMarker(new MarkerOptions()
+                                        .position(latLng)
+                                        .title(fuentes.getNomVia())
+                                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
+                            }
+                        }
+                        return true;
                     }
-                } else {
-                    Log.e("API Response", "Error en la respuesta: " + response.code());
-                }
-            }
 
+                    @Override
+                    public boolean onQueryTextChange(String newText) {
+                        // Acción mientras el usuario escribe
+                        if (newText != null) {
+
+                        }
+                        return true;
+                    }
+                });
+            }
             @Override
             public void onFailure(Call<List<Fuentes>> call, Throwable t) {
-                Log.e("API Error", t.getMessage());
+                t.printStackTrace(); // Manejo de errores
             }
-        });*/
+        });
 
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
@@ -112,7 +133,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         requestLocationPermission();
 
 
-        ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
+        /*ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
         apiService.getFuentes().enqueue(new Callback<List<Fuentes>>() {
             @Override
             public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
@@ -120,13 +141,30 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     Log.d("API Response", "Datos recibidos: " + response.body().toString());
                     List<Fuentes> fuentes = response.body();
                     for (Fuentes fuente : fuentes) {
-                        Log.d("API Response", "Fuente: " + fuente.getNomVia() + " - " + fuente.getLatitud() + ", " + fuente.getLongitud());
+                        Log.d("API Response", "Fuente: " + fuente.getNomVia() + " - " + fuente.getLatitud() + ", " + fuente.getLongitud()+","+fuente.getEstado());
                     }
                     for (Fuentes fuente : response.body()) {
                         LatLng latLng = new LatLng(fuente.getLatitud(), fuente.getLongitud());
-                        Map.addMarker(new MarkerOptions()
-                                .position(latLng)
-                                .title(fuente.getNomVia()));
+                        if(fuente.getUso() != null && fuente.getUso().equalsIgnoreCase("personas")){
+                            if(fuente.getEstado() != null && fuente.getEstado().equalsIgnoreCase("operativo")){
+                                Map.addMarker(new MarkerOptions()
+                                        .position(latLng)
+                                        .title(fuente.getNomVia())
+                                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
+                            }
+                            if(fuente.getEstado() != null && fuente.getEstado().equalsIgnoreCase("fuera_de_servicio")){
+                                Map.addMarker(new MarkerOptions()
+                                        .position(latLng)
+                                        .title(fuente.getNomVia())
+                                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)));
+                            }
+                            if(fuente.getEstado() != null && fuente.getEstado().equalsIgnoreCase("cerrada_temporalment")){
+                                Map.addMarker(new MarkerOptions()
+                                        .position(latLng)
+                                        .title(fuente.getNomVia())
+                                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_YELLOW)));
+                            }
+                        }
                     }
                 }
             }
@@ -135,7 +173,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             public void onFailure(Call<List<Fuentes>> call, Throwable t) {
                 t.printStackTrace(); // Manejo de errores
             }
-        });
+        });*/
     }
 
     private void getDeviceLocation(){
