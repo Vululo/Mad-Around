@@ -17,6 +17,9 @@ import androidx.core.view.WindowInsetsCompat;
 import com.brunov.proyectointegrador.api.ApiClient;
 import com.brunov.proyectointegrador.api.ApiService;
 import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -24,6 +27,7 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.Task;
 
@@ -33,6 +37,7 @@ import android.view.View;
 import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import retrofit2.Call;
@@ -42,8 +47,12 @@ import retrofit2.Response;
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback {
     private GoogleMap Map;
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
-    private static final int RADIUS_METERS = 2000; // Radio en metros (2 km)
+    private static final int RADIUS_METERS = 500; // Radio en metros (500 m)
     private FusedLocationProviderClient fusedLocationProviderClient;
+    private LocationCallback locationCallback;
+    private HashMap<String, Marker> currentMarkers = new HashMap<>();
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -84,33 +93,41 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 new LatLng(40.6437,-3.5702)
         );
         Map.setLatLngBoundsForCameraTarget(mapBounds);
-        Map.setMinZoomPreference(7);
+        Map.setMinZoomPreference(10);
         Map.setMaxZoomPreference(17);
         // Solicitar permisos
         requestLocationPermission();
 
+        configureLocationUpdates();
+    }
+    private void configureLocationUpdates() {
+        LocationRequest locationRequest = LocationRequest.create()
+                .setInterval(10000) // Cada 10 segundos
+                .setFastestInterval(5000) // Intervalo más rápido posible
+                .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
 
+        locationCallback = new LocationCallback() {
+            @Override
+            public void onLocationResult(@NonNull LocationResult locationResult) {
+                Location userLocation = locationResult.getLastLocation();
+                if (userLocation != null) {
+                    updateMapWithUserLocation(userLocation);
+                }
+            }
+        };
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallback, getMainLooper());
+        }
+    }
+    private void updateMapWithUserLocation(Location userLocation) {
         ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
         apiService.getFuentes().enqueue(new Callback<List<Fuentes>>() {
             @Override
             public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    List<Fuentes> fuentes = response.body();
-
-                    // Esperar a que se obtenga la ubicación del usuario
-                    getDeviceLocation(); // Este método ya está implementado en tu código
-                    Map.setOnMyLocationChangeListener(location -> {
-                        // Filtrar las fuentes cercanas
-                        List<Fuentes> fuentesCercanas = filtrarFuentesCercanas(fuentes, location);
-
-                        // Añadir marcadores al mapa
-                        for (Fuentes fuente : fuentesCercanas) {
-                            LatLng latLng = new LatLng(fuente.getLatitud(), fuente.getLongitud());
-                            Map.addMarker(new MarkerOptions()
-                                    .position(latLng)
-                                    .title(fuente.getNomVia()));
-                        }
-                    });
+                    List<Fuentes> fuentesCercanas = filtrarFuentesCercanas(response.body(), userLocation);
+                    actualizarMarcadores(fuentesCercanas);
                 }
             }
 
@@ -119,6 +136,35 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 t.printStackTrace(); // Manejo de errores
             }
         });
+
+    }
+    private void actualizarMarcadores(List<Fuentes> fuentesCercanas) {
+        HashMap<String, Marker> updatedMarkers = new HashMap<>();
+
+        for (Fuentes fuente : fuentesCercanas) {
+            String key = fuente.getLatitud() + "," + fuente.getLongitud();
+
+            if (currentMarkers.containsKey(key)) {
+                // Mantener marcador existente
+                updatedMarkers.put(key, currentMarkers.get(key));
+            } else {
+                // Crear nuevo marcador
+                LatLng latLng = new LatLng(fuente.getLatitud(), fuente.getLongitud());
+                Marker marker = Map.addMarker(new MarkerOptions()
+                        .position(latLng)
+                        .title(fuente.getNomVia()));
+                updatedMarkers.put(key, marker);
+            }
+        }
+
+        // Eliminar marcadores que ya no están cerca
+        for (String key : currentMarkers.keySet()) {
+            if (!updatedMarkers.containsKey(key)) {
+                currentMarkers.get(key).remove();
+            }
+        }
+
+        currentMarkers = updatedMarkers; // Actualizar lista de marcadores
     }
     // Método para filtrar fuentes cercanas
     private List<Fuentes> filtrarFuentesCercanas(List<Fuentes> fuentes, Location userLocation) {
