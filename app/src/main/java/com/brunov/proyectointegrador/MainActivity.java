@@ -33,6 +33,7 @@ import com.google.android.gms.tasks.Task;
 import android.Manifest;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
 import android.widget.Toast;
 
 import java.util.ArrayList;
@@ -50,7 +51,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private FusedLocationProviderClient fusedLocationProviderClient;
     private LocationCallback locationCallback;
     private HashMap<String, Marker> currentMarkers = new HashMap<>();
-
+    private Button pet,people,available,maintenance,disabled;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,6 +62,19 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+
+        pet=findViewById(R.id.pet);
+        people=findViewById(R.id.people);
+        available=findViewById(R.id.available);
+        maintenance=findViewById(R.id.maintenance);
+        disabled=findViewById(R.id.disabled);
+
+        // Button click listeners
+        pet.setOnClickListener(v -> applyFilter("OPERATIVO", "MASCOTAS"));
+        people.setOnClickListener(v -> applyFilter("OPERATIVO", "PERSONAS"));
+        available.setOnClickListener(v -> applyFilter("OPERATIVO", "PERSONAS"));
+        maintenance.setOnClickListener(v -> applyFilter("CERRADA_TEMPORALMENT", "PERSONAS"));
+        disabled.setOnClickListener(v -> applyFilter("FUERA_DE_SERVICIO", "PERSONAS"));
 
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
@@ -181,6 +195,44 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
         return fuentesCercanas;
     }
+
+    private List<Fuentes> filterFuentesByType(List<Fuentes> fuentes, String estadoFilter, String usoFilter) {
+        List<Fuentes> fuentesCercanas = new ArrayList<>();
+
+        for (Fuentes fuente : fuentes) {
+            // Filter based on both ESTADO and USO
+            boolean matchesEstado = fuente.getEstado().equalsIgnoreCase(estadoFilter);
+            boolean matchesUso = fuente.getUso().equalsIgnoreCase(usoFilter);
+
+            if (matchesEstado && matchesUso) {
+                fuentesCercanas.add(fuente);
+            }
+        }
+
+        return fuentesCercanas;
+    }
+
+    private void applyFilter(String estadoFilter, String usoFilter) {
+        ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
+        apiService.getFuentes().enqueue(new Callback<List<Fuentes>>() {
+            @Override
+            public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    // Filter the sources based on both filters
+                    List<Fuentes> filteredFuentes = filterFuentesByType(response.body(), estadoFilter, usoFilter);
+
+                    // Update markers with the filtered list
+                    actualizarMarcadores(filteredFuentes);
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<Fuentes>> call, Throwable t) {
+                t.printStackTrace(); // Handle error
+            }
+        });
+    }
+
 
     private void getDeviceLocation(){
         try{

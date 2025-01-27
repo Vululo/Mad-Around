@@ -15,51 +15,51 @@
 
     <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/disabled"
-        android:layout_width="35dp"
-        android:layout_height="35dp"
-        android:layout_alignParentBottom="true"
-        android:layout_marginEnd="22dp"
-        android:layout_marginBottom="616dp"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_alignParentTop="true"
+        android:layout_marginTop="80dp"
+        android:layout_marginEnd="24dp"
         android:layout_toStartOf="@+id/maintenance"
         android:background="@drawable/disabled" />
 
     <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/maintenance"
-        android:layout_width="35dp"
-        android:layout_height="35dp"
-        android:layout_alignParentBottom="true"
-        android:layout_marginEnd="22dp"
-        android:layout_marginBottom="616dp"
-        android:layout_toStartOf="@+id/enabled"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_alignParentTop="true"
+        android:layout_marginTop="80dp"
+        android:layout_marginEnd="24dp"
+        android:layout_toStartOf="@+id/available"
         android:background="@drawable/maintenance" />
 
     <androidx.appcompat.widget.AppCompatButton
-        android:id="@+id/enabled"
-        android:layout_width="35dp"
-        android:layout_height="35dp"
+        android:id="@+id/available"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_alignParentTop="true"
         android:layout_alignParentEnd="true"
-        android:layout_alignParentBottom="true"
-        android:layout_marginEnd="22dp"
-        android:layout_marginBottom="616dp"
+        android:layout_marginTop="80dp"
+        android:layout_marginEnd="24dp"
         android:background="@drawable/enabled" />
 
     <androidx.appcompat.widget.AppCompatButton
-        android:id="@+id/paw"
-        android:layout_width="35dp"
-        android:layout_height="35dp"
+        android:id="@+id/pet"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_below="@+id/people"
         android:layout_alignParentEnd="true"
-        android:layout_alignParentBottom="true"
-        android:layout_marginEnd="22dp"
-        android:layout_marginBottom="524dp"
+        android:layout_marginTop="24dp"
+        android:layout_marginEnd="24dp"
         android:background="@drawable/paw" />
 
     <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/people"
-        android:layout_width="35dp"
-        android:layout_height="35dp"
-        android:layout_above="@+id/paw"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_below="@+id/available"
         android:layout_alignParentEnd="true"
-        android:layout_marginEnd="22dp"
-        android:layout_marginBottom="7dp"
+        android:layout_marginTop="24dp"
+        android:layout_marginEnd="24dp"
         android:background="@drawable/people" />
 </RelativeLayout>
