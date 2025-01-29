@@ -105,7 +105,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         disabled.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                applyFilter("FUERA_DE_SERVICIO", "MASCOTAS");
+                applyFilter("FUERA_DE_SERVICIO", "PERSONAS");
                 Toast.makeText(MainActivity.this,"Fuera de Servicio",Toast.LENGTH_SHORT).show();
             }
         });
