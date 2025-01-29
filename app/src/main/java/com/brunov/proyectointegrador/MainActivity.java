@@ -77,14 +77,14 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         pet.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                applyFilter("OPERATIVO", "MASCOTAS");
+                applyFilter("O", "MASCOTAS");
                 Toast.makeText(MainActivity.this,"Mascotas",Toast.LENGTH_SHORT).show();
             }
         });
         people.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                applyFilter("OPERATIVO", "PERSONAS");
+                applyFilter("O", "PERSONAS");
                 Toast.makeText(MainActivity.this,"Personas",Toast.LENGTH_SHORT).show();
             }
         });
@@ -256,7 +256,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         for (Fuentes fuente : fuentes) {
             // Filter based on both ESTADO and USO
-            boolean matchesEstado = fuente.getEstado().equalsIgnoreCase(estadoFilter);
+            boolean matchesEstado = fuente.getEstado().contains(estadoFilter);
             boolean matchesUso = fuente.getUso().contains(usoFilter);
             Location fuenteLocation = new Location("");
             fuenteLocation.setLatitude(fuente.getLatitud());
