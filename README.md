@@ -27,7 +27,7 @@ Una aplicación para encontrar fuentes de agua cercanas en su ciudad, ya sea par
 <img src="img/Busqueda1.jpg" alt="App1" style="width:200px; height:auto;">
 <img src="img/Busqueda2.jpg" alt="App1" style="width:200px; height:auto;"> 
 
-- 🏷️ **Filtro de fuentes**: Herramietna que te permite filtrar las fuentes cercanas por :
+- 🏷️ **Filtro de fuentes**:
   - Estado de la fuente(Operativa ,Cerrada temporalmente, Fuera de servicio).
   - Tipo de uso (Personas, Mascotas, Ambas).
 
