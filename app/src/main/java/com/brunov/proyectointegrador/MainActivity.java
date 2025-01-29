@@ -1,6 +1,7 @@
 package com.brunov.proyectointegrador;
 
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.health.connect.datatypes.ExerciseRoute;
 import android.location.Location;
 import android.os.Bundle;
@@ -13,6 +14,9 @@ import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.appcompat.widget.SearchView;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.brunov.proyectointegrador.api.ApiClient;
 import com.brunov.proyectointegrador.api.ApiService;
@@ -30,9 +34,15 @@ import com.google.android.gms.tasks.Task;
 
 import android.Manifest;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.ArrayAdapter;
 import android.widget.EditText;
-import android.widget.SearchView;
+import android.widget.ListView;
+//import android.widget.SearchView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
@@ -47,50 +57,85 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private GoogleMap Map;
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
     private FusedLocationProviderClient fusedLocationProviderClient;
+    private ListView listview;
+    private ArrayAdapter<String> adapter;
+    private List<String> lista;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
+        ListView listView=findViewById(R.id.lista);
+        lista=new ArrayList<>();
+
         SearchView searchView = findViewById(R.id.busqueda);
+        EditText searchEditText = searchView.findViewById(androidx.appcompat.R.id.search_src_text);
+        searchEditText.setTextColor(Color.BLACK); // Color del texto
+        searchEditText.setHintTextColor(Color.GRAY); // Color del hint
 
-        ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
-        apiService.getFuentes().enqueue(new Callback<List<Fuentes>>() {
-            @Override
-            public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
-                List<Fuentes>fuente=response.body();
-                searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
-                    @Override
-                    public boolean onQueryTextSubmit(String query) {
-                        Map.clear();
-                        // Acción cuando el usuario envía la búsqueda
-                        for(Fuentes fuentes:fuente){
-                            if (query != null && query.equalsIgnoreCase(fuentes.getBarrio())) {
-                                LatLng latLng = new LatLng(fuentes.getLatitud(), fuentes.getLongitud());
-                                Map.addMarker(new MarkerOptions()
-                                        .position(latLng)
-                                        .title(fuentes.getNomVia())
-                                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
+        searchView.setOnClickListener(v -> {
+            searchView.setIconified(false);
+            listView.setVisibility(View.VISIBLE);
+
+
+            ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
+            apiService.getFuentes().enqueue(new Callback<List<Fuentes>>() {
+                @Override
+                public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
+                    List<Fuentes>fuente=response.body();
+                    for(Fuentes fuentes:fuente){
+                        lista.add(fuentes.getBarrio());
+                    }
+                    adapter = new ArrayAdapter<>(MainActivity.this, android.R.layout.simple_list_item_1, lista);
+                    listView.setAdapter(adapter);
+                    searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+                        @Override
+                        public boolean onQueryTextSubmit(String query) {
+                            Map.clear();
+                            // Acción cuando el usuario envía la búsqueda
+                            for(Fuentes fuentes:fuente){
+                                if (query != null && query.equalsIgnoreCase(fuentes.getBarrio())) {
+                                    LatLng latLng = new LatLng(fuentes.getLatitud(), fuentes.getLongitud());
+                                    Map.addMarker(new MarkerOptions()
+                                            .position(latLng)
+                                            .title(fuentes.getNomVia())
+                                            .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
+                                }
                             }
+                            // Ocultar el teclado
+                            hideKeyboard(v);
+                            return true;
                         }
-                        return true;
-                    }
 
-                    @Override
-                    public boolean onQueryTextChange(String newText) {
-                        // Acción mientras el usuario escribe
-                        if (newText != null) {
-
+                        @Override
+                        public boolean onQueryTextChange(String newText) {
+                            // Acción mientras el usuario escribe
+                            adapter.getFilter().filter(newText);
+                            if (newText.isEmpty()) {
+                                listView.setVisibility(View.GONE);
+                            }else {
+                                listView.setVisibility(View.VISIBLE);
+                            }
+                            return false;
                         }
-                        return true;
-                    }
-                });
-            }
-            @Override
-            public void onFailure(Call<List<Fuentes>> call, Throwable t) {
-                t.printStackTrace(); // Manejo de errores
-            }
+                    });
+                    listView.setOnItemClickListener((parent, view, position, id) -> {
+                        String selectedItem = adapter.getItem(position);
+                        searchView.setQuery(selectedItem, false); // Mostrar selección en SearchView
+                        // Ocultar el ListView
+                        listView.setVisibility(View.GONE);
+                        // Colapsar el SearchView
+                        //searchView.setIconified(true);
+                    });
+
+                }
+                @Override
+                public void onFailure(Call<List<Fuentes>> call, Throwable t) {
+                    t.printStackTrace(); // Manejo de errores
+                }
+            });
         });
 
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
@@ -103,6 +148,13 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
+    }
+
+    private void hideKeyboard(View view) {
+        InputMethodManager inputMethodManager = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+        if (inputMethodManager != null) {
+            inputMethodManager.hideSoftInputFromWindow(view.getWindowToken(), 0);
+        }
     }
 
     @Override

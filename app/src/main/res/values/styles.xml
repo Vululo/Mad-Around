@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="barrabusqueda">
+        <item name="android:layout_width">370dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_alignParentStart">true</item>
+        <item name="android:layout_alignParentTop">true</item>
+        <item name="android:layout_alignParentEnd">true</item>
+        <item name="android:layout_marginStart">21dp</item>
+        <item name="android:layout_marginTop">40dp</item>
+        <item name="android:layout_marginEnd">21dp</item>
+        <item name="android:background">@drawable/fondobarra</item>
+    </style>
+</resources>
