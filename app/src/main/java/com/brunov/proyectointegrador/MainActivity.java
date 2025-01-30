@@ -46,8 +46,10 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -60,6 +62,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private ListView listview;
     private ArrayAdapter<String> adapter;
     private List<String> lista;
+    private Set<String> barriosUnicos;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -69,6 +72,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         ListView listView=findViewById(R.id.lista);
         lista=new ArrayList<>();
+        barriosUnicos=new LinkedHashSet<>();
 
         SearchView searchView = findViewById(R.id.busqueda);
         EditText searchEditText = searchView.findViewById(androidx.appcompat.R.id.search_src_text);
@@ -86,9 +90,20 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
                     List<Fuentes>fuente=response.body();
                     for(Fuentes fuentes:fuente){
-                        lista.add(fuentes.getBarrio());
+                        barriosUnicos.add(fuentes.getBarrio());
                     }
-                    adapter = new ArrayAdapter<>(MainActivity.this, android.R.layout.simple_list_item_1, lista);
+                    for(String barrios:barriosUnicos){
+                        lista.add(barrios);
+                    }
+                    adapter = new ArrayAdapter<String>(MainActivity.this, android.R.layout.simple_list_item_1, lista) {
+                        @Override
+                        public View getView(int position, View convertView, ViewGroup parent) {
+                            View view = super.getView(position, convertView, parent);
+                            TextView textView = (TextView) view.findViewById(android.R.id.text1);
+                            textView.setTextColor(Color.BLACK); // Cambia el color del texto
+                            return view;
+                        }
+                    };
                     listView.setAdapter(adapter);
                     searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
                         @Override
