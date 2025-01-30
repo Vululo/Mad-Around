@@ -46,6 +46,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -72,7 +73,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         ListView listView=findViewById(R.id.lista);
         lista=new ArrayList<>();
-        barriosUnicos=new LinkedHashSet<>();
+        barriosUnicos=new HashSet<>();
 
         SearchView searchView = findViewById(R.id.busqueda);
         EditText searchEditText = searchView.findViewById(androidx.appcompat.R.id.search_src_text);
@@ -80,6 +81,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         searchEditText.setHintTextColor(Color.GRAY); // Color del hint
 
         searchView.setOnClickListener(v -> {
+            barriosUnicos.clear(); // Limpiar el Set de barrios únicos
+            lista.clear();
+
             searchView.setIconified(false);
             listView.setVisibility(View.VISIBLE);
 
