@@ -5,6 +5,7 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.os.Bundle;
 
@@ -77,35 +78,35 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         pet.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                applyFilter("O", "MASCOTAS");
+                applyFilterUso( "MASCOTAS");
                 Toast.makeText(MainActivity.this,"Mascotas",Toast.LENGTH_SHORT).show();
             }
         });
         people.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                applyFilter("O", "PERSONAS");
+                applyFilterUso( "PERSONAS");
                 Toast.makeText(MainActivity.this,"Personas",Toast.LENGTH_SHORT).show();
             }
         });
         available.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                applyFilter("OPERATIVO", "PERSONAS");
+                applyFilterEstado("OPERATIVO");
                 Toast.makeText(MainActivity.this,"Operativo",Toast.LENGTH_SHORT).show();
             }
         });
         maintenance.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                applyFilter("CERRADA_TEMPORALMENT", "PERSONAS");
+                applyFilterEstado("CERRADA_TEMPORALMENT");
                 Toast.makeText(MainActivity.this,"Cerrada Temporalmente",Toast.LENGTH_SHORT).show();
             }
         });
         disabled.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                applyFilter("FUERA_DE_SERVICIO", "PERSONAS");
+                applyFilterEstado("FUERA_DE_SERVICIO");
                 Toast.makeText(MainActivity.this,"Fuera de Servicio",Toast.LENGTH_SHORT).show();
             }
         });
@@ -194,7 +195,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 // Mantener marcador existente
                 updatedMarkers.put(key, currentMarkers.get(key));
             } else {
-                // Crear nuevo marcador
+                // Crear nuevo marcador personalizado segun el estado
                 LatLng latLng = new LatLng(fuente.getLatitud(), fuente.getLongitud());
                 String estado = fuente.getEstado();
                 Marker marker = null;
@@ -203,19 +204,19 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                          marker = Map.addMarker(new MarkerOptions()
                                 .position(latLng)
                                 .title(fuente.getNomVia())
-                                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
+                                .icon(getCustomMarker(R.drawable.markeroperative)));
                          break;
                     case "CERRADA_TEMPORALMENT":
                         marker = Map.addMarker(new MarkerOptions()
                                 .position(latLng)
                                 .title(fuente.getNomVia())
-                                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_YELLOW)));
+                                .icon(getCustomMarker(R.drawable.markermaintenance)));
                         break;
                     case "FUERA_DE_SERVICIO":
                         marker = Map.addMarker(new MarkerOptions()
                                 .position(latLng)
                                 .title(fuente.getNomVia())
-                                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)));
+                                .icon(getCustomMarker(R.drawable.markerclosed)));
                         break;
                 }
 
@@ -251,27 +252,34 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         return fuentesCercanas;
     }
 
-    private List<Fuentes> filterFuentesByType(List<Fuentes> fuentes, String estadoFilter, String usoFilter, Location userLocation) {
+    //Filtro de las Fuentes
+    private List<Fuentes> filterFuentesByType(List<Fuentes> fuentes, String filter, Location userLocation) {
         List<Fuentes> fuentesCercanas = new ArrayList<>();
 
         for (Fuentes fuente : fuentes) {
-            // Filter based on both ESTADO and USO
-            boolean matchesEstado = fuente.getEstado().contains(estadoFilter);
-            boolean matchesUso = fuente.getUso().contains(usoFilter);
+            // Entre todas las fuentes fitra segun lo que se pide
+            boolean matchesEstado = fuente.getEstado().equalsIgnoreCase(filter);
+            boolean matchesUso = fuente.getUso().contains(filter);
+
+            // Busca la localizacion de cada fuente
             Location fuenteLocation = new Location("");
             fuenteLocation.setLatitude(fuente.getLatitud());
             fuenteLocation.setLongitude(fuente.getLongitud());
 
             // Calcula la distancia entre el usuario y la fuente
             float distancia = userLocation.distanceTo(fuenteLocation);
-            if (distancia <= RADIUS_METERS && matchesEstado && matchesUso) { // Radio de 2 km
+
+            // Filtro de las fuentes
+            // Por ESTADO o por USO
+            if (distancia <= RADIUS_METERS && matchesEstado || distancia <= RADIUS_METERS && matchesUso) { // Radio de 2 km
                 fuentesCercanas.add(fuente);
             }
         }
 
         return fuentesCercanas;
     }
-    private void applyFilter(String estadoFilter, String usoFilter) {
+
+    private void applyFilterUso(String usoFilter) {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             Toast.makeText(this, "Permiso de ubicación no concedido", Toast.LENGTH_SHORT).show();
             return;
@@ -290,7 +298,40 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
                     if (response.isSuccessful() && response.body() != null) {
                         // Filtrar fuentes usando la ubicación obtenida
-                        List<Fuentes> filteredFuentes = filterFuentesByType(response.body(), estadoFilter, usoFilter, location);
+                        List<Fuentes> filteredFuentes = filterFuentesByType(response.body(), usoFilter, location);
+                        actualizarMarcadores(filteredFuentes);
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<List<Fuentes>> call, Throwable t) {
+                    t.printStackTrace();
+                    Toast.makeText(MainActivity.this, "Error al obtener fuentes", Toast.LENGTH_SHORT).show();
+                }
+            });
+        });
+    }
+
+    private void applyFilterEstado(String estadoFilter) {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            Toast.makeText(this, "Permiso de ubicación no concedido", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        fusedLocationProviderClient.getLastLocation().addOnSuccessListener(location -> {
+            if (location == null) {
+                Toast.makeText(this, "No se pudo obtener la ubicación actual", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            // Llamar a la API después de obtener la ubicación
+            ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
+            apiService.getFuentes().enqueue(new Callback<List<Fuentes>>() {
+                @Override
+                public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
+                    if (response.isSuccessful() && response.body() != null) {
+                        // Filtrar fuentes usando la ubicación obtenida
+                        List<Fuentes> filteredFuentes = filterFuentesByType(response.body(), estadoFilter, location);
                         actualizarMarcadores(filteredFuentes);
                     }
                 }
@@ -357,18 +398,14 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
-    private BitmapDescriptor getCustomColorMarker(int color) {
-        Paint paint = new Paint();
-        paint.setColor(color);
-        paint.setStyle(Paint.Style.FILL);
-        paint.setAntiAlias(true);
-
-        int size = 100; // Tamaño del marcador
-        Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+    private BitmapDescriptor getCustomMarker(int drawableRes) {
+        Drawable drawable = ContextCompat.getDrawable(this, drawableRes);
+        Bitmap bitmap = Bitmap.createBitmap(drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight(), Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
-        canvas.drawCircle(size / 2, size / 2, size / 2, paint);
-
+        drawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
+        drawable.draw(canvas);
         return BitmapDescriptorFactory.fromBitmap(bitmap);
     }
+
 
 }
