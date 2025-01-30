@@ -17,6 +17,7 @@ import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.fragment.app.Fragment;
 
 import com.brunov.proyectointegrador.api.ApiClient;
 import com.brunov.proyectointegrador.api.ApiService;
@@ -57,7 +58,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private static final int RADIUS_METERS = 500; // Radio en metros (500 m)
     private FusedLocationProviderClient fusedLocationProviderClient;
     private HashMap<String, Marker> currentMarkers = new HashMap<>();
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -67,12 +67,13 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
-
         Button pet = findViewById(R.id.pet);
         Button people = findViewById(R.id.people);
         Button available = findViewById(R.id.available);
         Button maintenance = findViewById(R.id.maintenance);
         Button disabled = findViewById(R.id.disabled);
+
+
 
         // Button click listeners
         pet.setOnClickListener(new View.OnClickListener() {
@@ -82,6 +83,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 Toast.makeText(MainActivity.this,"Mascotas",Toast.LENGTH_SHORT).show();
             }
         });
+
         people.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -89,25 +91,39 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 Toast.makeText(MainActivity.this,"Personas",Toast.LENGTH_SHORT).show();
             }
         });
+
         available.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+
                 applyFilterEstado("OPERATIVO");
                 Toast.makeText(MainActivity.this,"Operativo",Toast.LENGTH_SHORT).show();
+                available.setBackground(getDrawable(R.drawable.enabled2));
+                maintenance.setBackground(getDrawable(R.drawable.maintenance1));
+                disabled.setBackground(getDrawable(R.drawable.disabled1));
+
             }
         });
         maintenance.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+
                 applyFilterEstado("CERRADA_TEMPORALMENT");
-                Toast.makeText(MainActivity.this,"Cerrada Temporalmente",Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this,"En mantenimiento",Toast.LENGTH_SHORT).show();
+                maintenance.setBackground(getDrawable(R.drawable.maintenance2));
+                available.setBackground(getDrawable(R.drawable.enabled1));
+                disabled.setBackground(getDrawable(R.drawable.disabled1));
             }
         });
         disabled.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+
                 applyFilterEstado("FUERA_DE_SERVICIO");
                 Toast.makeText(MainActivity.this,"Fuera de Servicio",Toast.LENGTH_SHORT).show();
+                disabled.setBackground(getDrawable(R.drawable.disabled2));
+                available.setBackground(getDrawable(R.drawable.enabled1));
+                maintenance.setBackground(getDrawable(R.drawable.maintenance1));
             }
         });
 
