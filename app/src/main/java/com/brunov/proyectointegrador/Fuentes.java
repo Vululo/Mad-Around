@@ -5,7 +5,7 @@ public class Fuentes {
     private String ID;
     private String descClasificacion;
     private String codBarrio;
-    private String barrio;
+    private String BARRIO;
     private String codDistrito;
     private String distrito;
     private String estado;
@@ -37,8 +37,8 @@ public class Fuentes {
     public String getCodBarrio() { return codBarrio; }
     public void setCodBarrio(String codBarrio) { this.codBarrio = codBarrio; }
 
-    public String getBarrio() { return barrio; }
-    public void setBarrio(String barrio) { this.barrio = barrio; }
+    public String getBarrio() { return BARRIO; }
+    public void setBarrio(String BARRIO) { this.BARRIO = BARRIO; }
 
     public String getCodDistrito() { return codDistrito; }
     public void setCodDistrito(String codDistrito) { this.codDistrito = codDistrito; }
