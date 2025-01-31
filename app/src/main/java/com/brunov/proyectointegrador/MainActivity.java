@@ -71,6 +71,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
+        //Configuracion del BottomSheet
+        bottomSheet();
+
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
@@ -80,6 +83,21 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
+        });
+    }
+
+    public void bottomSheet(){
+        botonsheet=findViewById(R.id.botonsheet);
+        View vista = LayoutInflater.from(getApplicationContext()).inflate(R.layout.bottom_sheet_dialog, null);
+        linearLayoutItems = vista.findViewById(R.id.linearLayoutItems);
+        BottomSheetDialog dialog = new BottomSheetDialog(MainActivity.this);
+        botonsheet.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                dialog.setCancelable(true);
+                dialog.setContentView(vista);
+                dialog.show();
+            }
         });
     }
 
@@ -154,18 +172,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private void actualizarMarcadores(List<Fuentes> fuentesCercanas) {
         HashMap<String, Marker> updatedMarkers = new HashMap<>();
 
-        botonsheet=findViewById(R.id.botonsheet);
-        View vista = LayoutInflater.from(getApplicationContext()).inflate(R.layout.bottom_sheet_dialog, null);
-        linearLayoutItems = vista.findViewById(R.id.linearLayoutItems);
-        BottomSheetDialog dialog = new BottomSheetDialog(MainActivity.this);
-        botonsheet.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                dialog.setCancelable(true);
-                dialog.setContentView(vista);
-                dialog.show();
-            }
-        });
+        //Borrar todos los item del menu deslizable
+        VaciarItems();
 
         for (Fuentes fuente : fuentesCercanas) {
             String key = fuente.getLatitud() + "," + fuente.getLongitud();
@@ -182,12 +190,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 updatedMarkers.put(key, marker);
             }
 
-            //Menu deslizable
-            TextView newItem = new TextView(MainActivity.this);
-            newItem.setText("Nombre de la via: "+fuente.getNomVia());
-            newItem.setTextSize(18);
-            newItem.setPadding(16, 16, 16, 16);
-            linearLayoutItems.addView(newItem);
+            //Añadir items al menu deslizable
+            InsertarItem(fuente.getNomVia());
         }
 
         // Eliminar marcadores que ya no están cerca
@@ -199,6 +203,20 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         currentMarkers = updatedMarkers; // Actualizar lista de marcadores
     }
+
+    private void InsertarItem(String nombre){
+        //Menu deslizable
+        TextView newItem = new TextView(MainActivity.this);
+        newItem.setText("Nombre de la via: "+nombre);
+        newItem.setTextSize(18);
+        newItem.setPadding(16, 16, 16, 16);
+        linearLayoutItems.addView(newItem);
+    }
+
+    public void VaciarItems(){
+        linearLayoutItems.removeAllViews();
+    }
+
     // Método para filtrar fuentes cercanas
     private List<Fuentes> filtrarFuentesCercanas(List<Fuentes> fuentes, Location userLocation) {
         List<Fuentes> fuentesCercanas = new ArrayList<>();
