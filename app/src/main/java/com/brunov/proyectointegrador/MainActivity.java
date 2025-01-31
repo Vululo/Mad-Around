@@ -39,11 +39,13 @@ import com.google.android.gms.tasks.Task;
 import android.Manifest;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.ListView;
 //import android.widget.SearchView;
 import android.widget.TextView;
@@ -103,16 +105,22 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         SearchView searchView = findViewById(R.id.busqueda);
         EditText searchEditText = searchView.findViewById(androidx.appcompat.R.id.search_src_text);
+        searchEditText.setHint("Busqueda por Municipio");
         searchEditText.setTextColor(Color.BLACK); // Color del texto
         searchEditText.setHintTextColor(Color.GRAY); // Color del hint
 
+        searchView.setOnQueryTextFocusChangeListener((v,hasfocus)->{
+            if(!hasfocus){
+                searchView.setQuery("",false);
+                listView.setVisibility(View.GONE);
+            }
+        });
         searchView.setOnClickListener(v -> {
             barriosUnicos.clear(); // Limpiar el Set de barrios únicos
             lista.clear();
 
             searchView.setIconified(false);
             listView.setVisibility(View.VISIBLE);
-
 
             ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
             apiService.getFuentes().enqueue(new Callback<List<Fuentes>>() {
@@ -138,42 +146,84 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
                         @Override
                         public boolean onQueryTextSubmit(String query) {
-                            Map.clear();
-                            // Acción cuando el usuario envía la búsqueda
-                            for(Fuentes fuentes:fuente){
+                            Map.clear(); // Borrar marcadores actuales
+
+                            // Agregar solo los marcadores del barrio buscado
+                            for (Fuentes fuentes : fuente) {
                                 if (query != null && query.equalsIgnoreCase(fuentes.getBarrio())) {
                                     LatLng latLng = new LatLng(fuentes.getLatitud(), fuentes.getLongitud());
                                     Map.addMarker(new MarkerOptions()
                                             .position(latLng)
                                             .title(fuentes.getNomVia())
                                             .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
+
+                                    Map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 14));
                                 }
                             }
+                            listView.setVisibility(View.GONE);
                             // Ocultar el teclado
-                            hideKeyboard(v);
+                            hideKeyboard(searchView);
                             return true;
                         }
 
                         @Override
                         public boolean onQueryTextChange(String newText) {
-                            // Acción mientras el usuario escribe
                             adapter.getFilter().filter(newText);
+
                             if (newText.isEmpty()) {
                                 listView.setVisibility(View.GONE);
-                            }else {
+                                Map.clear(); // Borrar los marcadores de la búsqueda
+                                currentMarkers.clear();
+                                configureLocationUpdates();
+                                getDeviceLocation();
+                            } else {
                                 listView.setVisibility(View.VISIBLE);
                             }
                             return false;
                         }
                     });
+
                     listView.setOnItemClickListener((parent, view, position, id) -> {
-                        String selectedItem = adapter.getItem(position);
-                        searchView.setQuery(selectedItem, false); // Mostrar selección en SearchView
-                        // Ocultar el ListView
+                        String selectedItem = adapter.getItem(position); // Barrio seleccionado
+                        searchView.setQuery(selectedItem, false); // Mostrar en SearchView
+
+                        // Limpiar los marcadores actuales
+                        Map.clear();
+
+                        LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder(); // Para ajustar la cámara
+
+                        boolean found = false; // Para saber si se encontraron fuentes en el barrio
+
+                        // Agregar todos los marcadores del barrio seleccionado
+                        for (Fuentes fuentes : fuente) {
+                            if (selectedItem.equalsIgnoreCase(fuentes.getBarrio())) {
+                                LatLng latLng = new LatLng(fuentes.getLatitud(), fuentes.getLongitud());
+
+                                // Agregar marcador
+                                Marker marker = Map.addMarker(new MarkerOptions()
+                                        .position(latLng)
+                                        .title(fuentes.getNomVia())
+                                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
+
+                                currentMarkers.put(fuentes.getNomVia(), marker);
+                                boundsBuilder.include(latLng);
+                                found = true;
+                            }
+                        }
+
+                        if (found) {
+                            // Ajustar la cámara para que muestre todos los marcadores
+                            Map.animateCamera(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 100));
+                        } else {
+                            Toast.makeText(MainActivity.this, "No se encontraron fuentes en esta zona", Toast.LENGTH_SHORT).show();
+                        }
+
+                        hideKeyboard(searchView);
+                        // Ocultar el ListView después de la selección
                         listView.setVisibility(View.GONE);
-                        // Colapsar el SearchView
-                        //searchView.setIconified(true);
                     });
+
+
 
                 }
                 @Override
@@ -314,7 +364,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         LatLng userLocation = new LatLng(location.getLatitude(), location.getLongitude());
 
                         // Mueve la cámara al usuario
-                        Map.moveCamera(CameraUpdateFactory.newLatLngZoom(userLocation, 15));
+                        Map.animateCamera(CameraUpdateFactory.newLatLngZoom(userLocation, 15));
                     } else {
                         Toast.makeText(this, "No se pudo obtener la ubicación actual", Toast.LENGTH_SHORT).show();
                     }
