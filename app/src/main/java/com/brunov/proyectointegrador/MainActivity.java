@@ -36,9 +36,12 @@ import com.google.android.material.bottomsheet.BottomSheetDialog;
 
 import android.Manifest;
 import android.util.Log;
+import android.view.GestureDetector;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -60,10 +63,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private HashMap<String, Marker> currentMarkers = new HashMap<>();
     private LinearLayout linearLayoutItems;
     private Button botonsheet;
-    TextView tvNombre;
-    TextView tvEdad;
-    TextView tvPuesto;
-
+    private GestureDetector gestureDetector;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -78,7 +78,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
-
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
@@ -91,13 +90,24 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         View vista = LayoutInflater.from(getApplicationContext()).inflate(R.layout.bottom_sheet_dialog, null);
         linearLayoutItems = vista.findViewById(R.id.linearLayoutItems);
         BottomSheetDialog dialog = new BottomSheetDialog(MainActivity.this);
-        botonsheet.setOnClickListener(new View.OnClickListener() {
+        dialog.setCancelable(true);
+        dialog.setContentView(vista);
+        gestureDetector = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
             @Override
-            public void onClick(View view) {
-                dialog.setCancelable(true);
-                dialog.setContentView(vista);
-                dialog.show();
+            public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
+                // Detectar deslizamiento hacia arriba (swipe up)
+                if (e2.getY() < e1.getY()) { // Si el deslizamiento es hacia arriba
+                        dialog.show(); // Realizar acción
+                        return true;
+                }
+                return false;
             }
+        });
+        View touchListenerView = findViewById(R.id.botonsheet);  // Este es un contenedor fuera del mapa
+        touchListenerView.setOnTouchListener((v, event) -> {
+            // Pasar el evento al GestureDetector para que maneje el deslizamiento
+            gestureDetector.onTouchEvent(event);
+            return true;
         });
     }
 
@@ -205,12 +215,37 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void InsertarItem(String nombre){
-        //Menu deslizable
-        TextView newItem = new TextView(MainActivity.this);
-        newItem.setText("Nombre de la via: "+nombre);
-        newItem.setTextSize(18);
-        newItem.setPadding(16, 16, 16, 16);
-        linearLayoutItems.addView(newItem);
+        LinearLayout newItemContainer = new LinearLayout(MainActivity.this);
+        newItemContainer.setOrientation(LinearLayout.HORIZONTAL); // Los elementos se organizan horizontalmente (imagen + texto)
+        newItemContainer.setPadding(16, 16, 16, 16);
+        newItemContainer.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        ));
+
+        newItemContainer.setBackgroundResource(R.drawable.item_border);
+
+        // Crear la imagen
+        ImageView imageView = new ImageView(MainActivity.this);
+        imageView.setImageResource(R.drawable.ic_action);  // Aquí puedes cambiarlo por la imagen que desees
+        imageView.setLayoutParams(new LinearLayout.LayoutParams(120, 120));  // Tamaño de la imagen
+
+        // Crear el TextView para el texto
+        TextView textView = new TextView(MainActivity.this);
+        textView.setText("Nombre de la vía: " + nombre);
+        textView.setTextSize(18);
+        textView.setPadding(16, 0, 0, 0);  // Espaciado entre la imagen y el texto
+        textView.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        ));
+
+        // Añadir la imagen y el texto al contenedor
+        newItemContainer.addView(imageView);
+        newItemContainer.addView(textView);
+
+        // Añadir el contenedor al LinearLayout principal
+        linearLayoutItems.addView(newItemContainer);
     }
 
     public void VaciarItems(){
