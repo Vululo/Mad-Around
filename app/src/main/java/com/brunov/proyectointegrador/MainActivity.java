@@ -64,6 +64,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private LinearLayout linearLayoutItems;
     private Button botonsheet;
     private GestureDetector gestureDetector;
+    BottomSheetDialog dialog;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,7 +74,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         setContentView(R.layout.activity_main);
 
         //Configuracion del BottomSheet
-        bottomSheet();
+        botonsheet=findViewById(R.id.botonsheet);
+        View vista = LayoutInflater.from(getApplicationContext()).inflate(R.layout.bottom_sheet_dialog, null);
+        linearLayoutItems = vista.findViewById(R.id.linearLayoutItems);
+        dialog = new BottomSheetDialog(MainActivity.this);
+        bottomSheet(dialog,vista);
 
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
@@ -85,11 +91,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         });
     }
 
-    public void bottomSheet(){
-        botonsheet=findViewById(R.id.botonsheet);
-        View vista = LayoutInflater.from(getApplicationContext()).inflate(R.layout.bottom_sheet_dialog, null);
-        linearLayoutItems = vista.findViewById(R.id.linearLayoutItems);
-        BottomSheetDialog dialog = new BottomSheetDialog(MainActivity.this);
+    public void bottomSheet(BottomSheetDialog dialog,View vista){
         dialog.setCancelable(true);
         dialog.setContentView(vista);
         gestureDetector = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
@@ -201,7 +203,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
 
             //Añadir items al menu deslizable
-            InsertarItem(fuente.getNomVia());
+            InsertarItem(fuente);
         }
 
         // Eliminar marcadores que ya no están cerca
@@ -214,14 +216,17 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         currentMarkers = updatedMarkers; // Actualizar lista de marcadores
     }
 
-    private void InsertarItem(String nombre){
+    private void InsertarItem(Fuentes fuente){
         LinearLayout newItemContainer = new LinearLayout(MainActivity.this);
         newItemContainer.setOrientation(LinearLayout.HORIZONTAL); // Los elementos se organizan horizontalmente (imagen + texto)
         newItemContainer.setPadding(16, 16, 16, 16);
-        newItemContainer.setLayoutParams(new LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-        ));
+        );
+
+        layoutParams.setMargins(0,0,0,5);
+        newItemContainer.setLayoutParams(layoutParams);
 
         newItemContainer.setBackgroundResource(R.drawable.item_border);
 
@@ -232,8 +237,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         // Crear el TextView para el texto
         TextView textView = new TextView(MainActivity.this);
-        textView.setText("Nombre de la vía: " + nombre);
+        textView.setText("Nombre de la vía: " + fuente.getNomVia());
         textView.setTextSize(18);
+        textView.setTextColor(getResources().getColor(R.color.black));
         textView.setPadding(16, 0, 0, 0);  // Espaciado entre la imagen y el texto
         textView.setLayoutParams(new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -243,6 +249,13 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         // Añadir la imagen y el texto al contenedor
         newItemContainer.addView(imageView);
         newItemContainer.addView(textView);
+
+        newItemContainer.setOnClickListener(v -> {
+            // Aquí moverás el mapa al marcador con la latitud y longitud asociada
+            LatLng location = new LatLng(fuente.getLatitud(),fuente.getLongitud());
+            Map.moveCamera(CameraUpdateFactory.newLatLngZoom(location, 80));
+            dialog.dismiss();
+        });
 
         // Añadir el contenedor al LinearLayout principal
         linearLayoutItems.addView(newItemContainer);
