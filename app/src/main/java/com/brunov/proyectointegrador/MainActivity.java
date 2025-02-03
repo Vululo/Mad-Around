@@ -232,7 +232,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         // Crear la imagen
         ImageView imageView = new ImageView(MainActivity.this);
-        imageView.setImageResource(R.drawable.ic_action);  // Aquí puedes cambiarlo por la imagen que desees
+        imageView.setImageResource(R.drawable.icono_ubi);  // Aquí puedes cambiarlo por la imagen que desees
         imageView.setLayoutParams(new LinearLayout.LayoutParams(120, 120));  // Tamaño de la imagen
 
         // Crear el TextView para el texto
