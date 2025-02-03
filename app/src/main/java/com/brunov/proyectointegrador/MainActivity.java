@@ -82,69 +82,74 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         pet.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                petClick=!petClick;
+                togglePetPeopleFilter("MASCOTAS");
+
                 if(petClick){
-                    togglePetPeopleFilter("MASCOTAS");
                     Toast.makeText(MainActivity.this,"Mascotas",Toast.LENGTH_SHORT).show();
                     pet.setBackground(getDrawable(R.drawable.paw2));
                 }else{
                     pet.setBackground(getDrawable(R.drawable.paw1));
 
                 }
-                petClick=!petClick;
             }
         });
 
         people.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if(peopleClick){
+                peopleClick=!peopleClick;
                 togglePetPeopleFilter("PERSONAS");
+
+                if(peopleClick){
                 Toast.makeText(MainActivity.this,"Personas",Toast.LENGTH_SHORT).show();
                     people.setBackground(getDrawable(R.drawable.people2));
                 }else{
                     people.setBackground(getDrawable(R.drawable.people1));
                 }
-                peopleClick=!peopleClick;
             }
         });
 
         available.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                operativeClick=!operativeClick;
+                toggleStatusFilter("OPERATIVO");
+
                 if(operativeClick){
-                    toggleStatusFilter("OPERATIVO");
                     Toast.makeText(MainActivity.this,"Operativo",Toast.LENGTH_SHORT).show();
                     available.setBackground(getDrawable(R.drawable.enabled2));
                 }else{
                     available.setBackground(getDrawable(R.drawable.enabled1));
                 }
-                operativeClick=!operativeClick;
             }
         });
         maintenance.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                maintenaceClick=!maintenaceClick;
+                toggleStatusFilter("CERRADA_TEMPORALMENT");
+
                 if(maintenaceClick){
-                    toggleStatusFilter("CERRADA_TEMPORALMENT");
                     Toast.makeText(MainActivity.this,"En mantenimiento",Toast.LENGTH_SHORT).show();
                     maintenance.setBackground(getDrawable(R.drawable.maintenance2));
                 }else{
                     maintenance.setBackground(getDrawable(R.drawable.maintenance1));
                 }
-                maintenaceClick=!maintenaceClick;
             }
         });
         disabled.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                disabledClick = !disabledClick;
+                toggleStatusFilter("FUERA_DE_SERVICIO");
+
                 if(disabledClick) {
-                    toggleStatusFilter("FUERA_DE_SERVICIO");
                     Toast.makeText(MainActivity.this, "Fuera de Servicio", Toast.LENGTH_SHORT).show();
                     disabled.setBackground(getDrawable(R.drawable.disabled2));
                 }else{
                     disabled.setBackground(getDrawable(R.drawable.disabled1));
                 }
-                disabledClick = !disabledClick;
             }
         });
 
