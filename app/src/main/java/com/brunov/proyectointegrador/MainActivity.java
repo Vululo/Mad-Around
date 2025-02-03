@@ -58,6 +58,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private static final int RADIUS_METERS = 500; // Radio en metros (500 m)
     private FusedLocationProviderClient fusedLocationProviderClient;
     private HashMap<String, Marker> currentMarkers = new HashMap<>();
+    private boolean petClick,peopleClick,maintenaceClick,disabledClick,operativeClick = false;
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -79,51 +82,69 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         pet.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                applyFilterUso( "MASCOTAS");
-                Toast.makeText(MainActivity.this,"Mascotas",Toast.LENGTH_SHORT).show();
+                if(petClick){
+                    togglePetPeopleFilter("MASCOTAS");
+                    Toast.makeText(MainActivity.this,"Mascotas",Toast.LENGTH_SHORT).show();
+                    pet.setBackground(getDrawable(R.drawable.paw2));
+                }else{
+                    pet.setBackground(getDrawable(R.drawable.paw1));
+
+                }
+                petClick=!petClick;
             }
         });
 
         people.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                applyFilterUso( "PERSONAS");
+                if(peopleClick){
+                togglePetPeopleFilter("PERSONAS");
                 Toast.makeText(MainActivity.this,"Personas",Toast.LENGTH_SHORT).show();
+                    people.setBackground(getDrawable(R.drawable.people2));
+                }else{
+                    people.setBackground(getDrawable(R.drawable.people1));
+                }
+                peopleClick=!peopleClick;
             }
         });
 
         available.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-
-                applyFilterEstado("OPERATIVO");
-                Toast.makeText(MainActivity.this,"Operativo",Toast.LENGTH_SHORT).show();
-                available.setBackground(getDrawable(R.drawable.enabled2));
-                maintenance.setBackground(getDrawable(R.drawable.maintenance1));
-                disabled.setBackground(getDrawable(R.drawable.disabled1));
-
+                if(operativeClick){
+                    toggleStatusFilter("OPERATIVO");
+                    Toast.makeText(MainActivity.this,"Operativo",Toast.LENGTH_SHORT).show();
+                    available.setBackground(getDrawable(R.drawable.enabled2));
+                }else{
+                    available.setBackground(getDrawable(R.drawable.enabled1));
+                }
+                operativeClick=!operativeClick;
             }
         });
         maintenance.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-
-                applyFilterEstado("CERRADA_TEMPORALMENT");
-                Toast.makeText(MainActivity.this,"En mantenimiento",Toast.LENGTH_SHORT).show();
-                maintenance.setBackground(getDrawable(R.drawable.maintenance2));
-                available.setBackground(getDrawable(R.drawable.enabled1));
-                disabled.setBackground(getDrawable(R.drawable.disabled1));
+                if(maintenaceClick){
+                    toggleStatusFilter("CERRADA_TEMPORALMENT");
+                    Toast.makeText(MainActivity.this,"En mantenimiento",Toast.LENGTH_SHORT).show();
+                    maintenance.setBackground(getDrawable(R.drawable.maintenance2));
+                }else{
+                    maintenance.setBackground(getDrawable(R.drawable.maintenance1));
+                }
+                maintenaceClick=!maintenaceClick;
             }
         });
         disabled.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-
-                applyFilterEstado("FUERA_DE_SERVICIO");
-                Toast.makeText(MainActivity.this,"Fuera de Servicio",Toast.LENGTH_SHORT).show();
-                disabled.setBackground(getDrawable(R.drawable.disabled2));
-                available.setBackground(getDrawable(R.drawable.enabled1));
-                maintenance.setBackground(getDrawable(R.drawable.maintenance1));
+                if(disabledClick) {
+                    toggleStatusFilter("FUERA_DE_SERVICIO");
+                    Toast.makeText(MainActivity.this, "Fuera de Servicio", Toast.LENGTH_SHORT).show();
+                    disabled.setBackground(getDrawable(R.drawable.disabled2));
+                }else{
+                    disabled.setBackground(getDrawable(R.drawable.disabled1));
+                }
+                disabledClick = !disabledClick;
             }
         });
 
@@ -268,8 +289,111 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         return fuentesCercanas;
     }
 
+
+
+
+
+
+
+
+
+    private List<String> selectedPetPeopleFilters = new ArrayList<>();  // Store selected pet/people filters
+    private List<String> selectedStatusFilters = new ArrayList<>();  // Store selected available/maintenance/disabled filters
+
+    // Toggle pet/people filter (add or remove from the list)
+    private void togglePetPeopleFilter(String filter) {
+        if (selectedPetPeopleFilters.contains(filter)) {
+            selectedPetPeopleFilters.remove(filter);  // Remove if already added
+        } else {
+            selectedPetPeopleFilters.add(filter);  // Add if not already present
+        }
+        applyFilters();  // Apply the updated list of filters
+    }
+
+    // Toggle available/maintenance/disabled filter (add or remove from the list)
+    private void toggleStatusFilter(String filter) {
+        if (selectedStatusFilters.contains(filter)) {
+            selectedStatusFilters.remove(filter);  // Remove if already added
+        } else {
+            selectedStatusFilters.add(filter);  // Add if not already present
+        }
+        applyFilters();  // Apply the updated list of filters
+    }
+
+    // Apply the current filters
+    private void applyFilters() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            Toast.makeText(this, "Permiso de ubicación no concedido", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        fusedLocationProviderClient.getLastLocation().addOnSuccessListener(location -> {
+            if (location == null) {
+                Toast.makeText(this, "No se pudo obtener la ubicación actual", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            // Call API after getting location
+            ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
+            apiService.getFuentes().enqueue(new Callback<List<Fuentes>>() {
+                @Override
+                public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
+                    if (response.isSuccessful() && response.body() != null) {
+                        // Filter sources using the selected filters
+                        List<Fuentes> filteredFuentes = filterFuentes(response.body(), location);
+                        actualizarMarcadores(filteredFuentes);
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<List<Fuentes>> call, Throwable t) {
+                    t.printStackTrace();
+                    Toast.makeText(MainActivity.this, "Error al obtener fuentes", Toast.LENGTH_SHORT).show();
+                }
+            });
+        });
+    }
+
+    // Modify the filterFuentes method to handle multiple filters (exclusive)
+    private List<Fuentes> filterFuentes(List<Fuentes> fuentes, Location userLocation) {
+        List<Fuentes> fuentesCercanas = new ArrayList<>();
+
+        for (Fuentes fuente : fuentes) {
+            boolean matchesPetPeopleFilter = selectedPetPeopleFilters.isEmpty() || selectedPetPeopleFilters.stream().anyMatch(filter ->
+                    fuente.getUso().contains(filter)
+            );
+
+            boolean matchesStatusFilter = selectedStatusFilters.isEmpty() || selectedStatusFilters.stream().anyMatch(filter ->
+                    fuente.getEstado().equalsIgnoreCase(filter)
+            );
+
+            // Get the location of each source
+            Location fuenteLocation = new Location("");
+            fuenteLocation.setLatitude(fuente.getLatitud());
+            fuenteLocation.setLongitude(fuente.getLongitud());
+
+            // Calculate the distance between the user and the source
+            float distance = userLocation.distanceTo(fuenteLocation);
+
+            // Apply the filters: distance and matching filters (exclusive)
+            if (distance <= RADIUS_METERS && matchesPetPeopleFilter && matchesStatusFilter) {
+                fuentesCercanas.add(fuente);
+            }
+        }
+
+        return fuentesCercanas;
+    }
+
+
+
+
+
+
+
+
+
     //Filtro de las Fuentes
-    private List<Fuentes> filterFuentesByType(List<Fuentes> fuentes, String filter, Location userLocation) {
+    private List<Fuentes> filterFuentes(List<Fuentes> fuentes, String filter, Location userLocation) {
         List<Fuentes> fuentesCercanas = new ArrayList<>();
 
         for (Fuentes fuente : fuentes) {
@@ -287,7 +411,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
             // Filtro de las fuentes
             // Por ESTADO o por USO
-            if (distancia <= RADIUS_METERS && matchesEstado || distancia <= RADIUS_METERS && matchesUso) { // Radio de 2 km
+            if (distancia <= RADIUS_METERS && (matchesEstado || matchesUso) || (matchesUso && matchesEstado)) { // Radio de 2 km
                 fuentesCercanas.add(fuente);
             }
         }
@@ -295,7 +419,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         return fuentesCercanas;
     }
 
-    private void applyFilterUso(String usoFilter) {
+    private void applyFilter(String filter) {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             Toast.makeText(this, "Permiso de ubicación no concedido", Toast.LENGTH_SHORT).show();
             return;
@@ -314,7 +438,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
                     if (response.isSuccessful() && response.body() != null) {
                         // Filtrar fuentes usando la ubicación obtenida
-                        List<Fuentes> filteredFuentes = filterFuentesByType(response.body(), usoFilter, location);
+                        List<Fuentes> filteredFuentes = filterFuentes(response.body(), filter, location);
                         actualizarMarcadores(filteredFuentes);
                     }
                 }
@@ -327,40 +451,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             });
         });
     }
-
-    private void applyFilterEstado(String estadoFilter) {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            Toast.makeText(this, "Permiso de ubicación no concedido", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        fusedLocationProviderClient.getLastLocation().addOnSuccessListener(location -> {
-            if (location == null) {
-                Toast.makeText(this, "No se pudo obtener la ubicación actual", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            // Llamar a la API después de obtener la ubicación
-            ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
-            apiService.getFuentes().enqueue(new Callback<List<Fuentes>>() {
-                @Override
-                public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
-                    if (response.isSuccessful() && response.body() != null) {
-                        // Filtrar fuentes usando la ubicación obtenida
-                        List<Fuentes> filteredFuentes = filterFuentesByType(response.body(), estadoFilter, location);
-                        actualizarMarcadores(filteredFuentes);
-                    }
-                }
-
-                @Override
-                public void onFailure(Call<List<Fuentes>> call, Throwable t) {
-                    t.printStackTrace();
-                    Toast.makeText(MainActivity.this, "Error al obtener fuentes", Toast.LENGTH_SHORT).show();
-                }
-            });
-        });
-    }
-
 
     private void getDeviceLocation(){
         try{
