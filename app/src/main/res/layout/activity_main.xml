@@ -29,4 +29,53 @@
         android:layout_marginEnd="21dp"
         android:background="@color/white"
         android:visibility="gone"/>
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/disabled"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_alignParentTop="true"
+        android:layout_marginTop="80dp"
+        android:layout_marginEnd="20dp"
+        android:layout_toStartOf="@+id/maintenance"
+        android:background="@drawable/disabled1" />
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/maintenance"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_alignParentTop="true"
+        android:layout_marginTop="80dp"
+        android:layout_marginEnd="20dp"
+        android:layout_toStartOf="@+id/available"
+        android:background="@drawable/maintenance1" />
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/available"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:layout_marginTop="80dp"
+        android:layout_marginEnd="20dp"
+        android:background="@drawable/enabled1" />
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/people"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_below="@+id/available"
+        android:layout_alignParentEnd="true"
+        android:layout_marginTop="24dp"
+        android:layout_marginEnd="20dp"
+        android:background="@drawable/people1" />
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/pet"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_below="@+id/people"
+        android:layout_alignParentEnd="true"
+        android:layout_marginTop="20dp"
+        android:layout_marginEnd="20dp"
+        android:background="@drawable/paw1" />
 </RelativeLayout>

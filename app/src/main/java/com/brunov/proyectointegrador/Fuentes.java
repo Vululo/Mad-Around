@@ -6,6 +6,7 @@ public class Fuentes {
     private String ESTADO;
     private double LATITUD;
     private double LONGITUD;
+    private String tipoVia;
     private String NOM_VIA;
     private String USO;
 
@@ -25,5 +26,6 @@ public class Fuentes {
     public void setNomVia(String nomVia) { this.NOM_VIA = nomVia; }
 
     public String getUso() { return USO; }
-    public void setUso(String USO) { this.USO = USO; }
+    public void setUso(String Uso) { this.USO = Uso; }
+
 }
