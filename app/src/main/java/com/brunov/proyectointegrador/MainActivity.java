@@ -71,6 +71,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private FusedLocationProviderClient fusedLocationProviderClient;
     private LocationCallback locationCallback;
     private HashMap<String, Marker> currentMarkers = new HashMap<>();
+    private HashMap<String,Marker> searchMarkers = new HashMap<>();
 
 
     private ListView listview;
@@ -105,7 +106,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         SearchView searchView = findViewById(R.id.busqueda);
         EditText searchEditText = searchView.findViewById(androidx.appcompat.R.id.search_src_text);
-        searchEditText.setHint("Busqueda por Municipio");
+        searchEditText.setHint("Busqueda por Barrio");
         searchEditText.setTextColor(Color.BLACK); // Color del texto
         searchEditText.setHintTextColor(Color.GRAY); // Color del hint
 
@@ -146,24 +147,40 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
                         @Override
                         public boolean onQueryTextSubmit(String query) {
-                            Map.clear(); // Borrar marcadores actuales
+                            Map.clear();
 
-                            // Agregar solo los marcadores del barrio buscado
+                            LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder(); // Para ajustar la cámara
+
+                            boolean found = false; // Para saber si se encontraron fuentes en el barrio
+
+                            // Agregar todos los marcadores del barrio seleccionado
                             for (Fuentes fuentes : fuente) {
                                 if (query != null && query.equalsIgnoreCase(fuentes.getBarrio())) {
                                     LatLng latLng = new LatLng(fuentes.getLatitud(), fuentes.getLongitud());
-                                    Map.addMarker(new MarkerOptions()
+
+                                    // Agregar marcador
+                                    Marker marker = Map.addMarker(new MarkerOptions()
                                             .position(latLng)
                                             .title(fuentes.getNomVia())
                                             .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
 
-                                    Map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 14));
+                                    searchMarkers.put(fuentes.getNomVia(), marker);
+                                    boundsBuilder.include(latLng);
+                                    found = true;
                                 }
                             }
-                            listView.setVisibility(View.GONE);
-                            // Ocultar el teclado
+
+                            if (found) {
+                                // Ajustar la cámara para que muestre todos los marcadores
+                                Map.animateCamera(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 100));
+                            } else {
+                                Toast.makeText(MainActivity.this, "No se encontraron fuentes en esta zona", Toast.LENGTH_SHORT).show();
+                            }
+
                             hideKeyboard(searchView);
-                            return true;
+                            // Ocultar el ListView después de la selección
+                            listView.setVisibility(View.GONE);
+                            return found;
                         }
 
                         @Override
@@ -205,7 +222,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                                         .title(fuentes.getNomVia())
                                         .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
 
-                                currentMarkers.put(fuentes.getNomVia(), marker);
+                                searchMarkers.put(fuentes.getNomVia(), marker);
                                 boundsBuilder.include(latLng);
                                 found = true;
                             }
@@ -222,6 +239,24 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         // Ocultar el ListView después de la selección
                         listView.setVisibility(View.GONE);
                     });
+                    /*
+                    // Agregar solo los marcadores del barrio buscado
+                            for (Fuentes fuentes : fuente) {
+                                if (query != null && query.equalsIgnoreCase(fuentes.getBarrio())) {
+                                    LatLng latLng = new LatLng(fuentes.getLatitud(), fuentes.getLongitud());
+                                    Map.addMarker(new MarkerOptions()
+                                            .position(latLng)
+                                            .title(fuentes.getNomVia())
+                                            .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
+
+                                    Map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 14));
+                                }
+                            }
+                            listView.setVisibility(View.GONE);
+                            // Ocultar el teclado
+                            hideKeyboard(searchView);
+                            return true;
+                    */
 
 
 
