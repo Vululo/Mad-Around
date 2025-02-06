@@ -2,11 +2,8 @@ package com.brunov.proyectointegrador;
 
 import android.content.pm.PackageManager;
 import android.graphics.Color;
-import android.health.connect.datatypes.ExerciseRoute;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.Paint;
 import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.os.Bundle;
@@ -19,10 +16,7 @@ import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
-import androidx.fragment.app.Fragment;
 import androidx.appcompat.widget.SearchView;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 
 import com.brunov.proyectointegrador.api.ApiClient;
 import com.brunov.proyectointegrador.api.ApiService;
@@ -37,7 +31,6 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.BitmapDescriptor;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
@@ -45,16 +38,12 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.Task;
 
 import android.Manifest;
-import android.util.Log;
-import android.view.LayoutInflater;
-import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
-import android.widget.ImageView;
 import android.widget.ListView;
 //import android.widget.SearchView;
 import android.widget.TextView;
@@ -62,11 +51,8 @@ import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import retrofit2.Call;
@@ -78,8 +64,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
     private static final int RADIUS_METERS = 500; // Radio en metros (500 m)
     private FusedLocationProviderClient fusedLocationProviderClient;
-    private HashMap<String, Marker> currentMarkers = new HashMap<>();
     private boolean petClick,peopleClick,maintenaceClick,disabledClick,operativeClick = false;
+
+    private HashMap<String, Marker> currentMarkers = new HashMap<>();
     private HashMap<String,Marker> searchMarkers = new HashMap<>();
 
 
@@ -190,6 +177,69 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         });
     }
 
+    //todo
+    // Apply the current filters
+    private void applyFilters() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            Toast.makeText(this, "Permiso de ubicación no concedido", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        fusedLocationProviderClient.getLastLocation().addOnSuccessListener(location -> {
+            if (location == null) {
+                Toast.makeText(this, "No se pudo obtener la ubicación actual", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            // Call API after getting location
+            ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
+            apiService.getFuentes().enqueue(new Callback<List<Fuentes>>() {
+                @Override
+                public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
+                    if (response.isSuccessful() && response.body() != null) {
+                        // Filter sources using the selected filters
+                        List<Fuentes> filteredFuentes = filterFuentes(response.body());
+                        actualizarMarcadores(filteredFuentes);
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<List<Fuentes>> call, Throwable t) {
+                    t.printStackTrace();
+                    Toast.makeText(MainActivity.this, "Error al obtener fuentes", Toast.LENGTH_SHORT).show();
+                }
+            });
+        });
+    }
+    //todo
+    // Modify the filterFuentes method to handle multiple filters (exclusive)
+    private List<Fuentes> filterFuentes(List<Fuentes> fuentes) {
+        List<Fuentes> fuentesCercanas = new ArrayList<>();
+
+        for (Fuentes fuente : fuentes) {
+            boolean matchesPetPeopleFilter = selectedPetPeopleFilters.isEmpty() || selectedPetPeopleFilters.stream().anyMatch(filter ->
+                    fuente.getUso().contains(filter)
+            );
+
+            boolean matchesStatusFilter = selectedStatusFilters.isEmpty() || selectedStatusFilters.stream().anyMatch(filter ->
+                    fuente.getEstado().equalsIgnoreCase(filter)
+            );
+
+            // Get the location of each source
+            Location fuenteLocation = new Location("");
+            fuenteLocation.setLatitude(fuente.getLatitud());
+            fuenteLocation.setLongitude(fuente.getLongitud());
+
+            // Apply the filters: distance and matching filters (exclusive)
+            if (matchesPetPeopleFilter && matchesStatusFilter) {
+                fuentesCercanas.add(fuente);
+            }
+        }
+        return fuentesCercanas;
+    }
+
+
+
     private void BarraDeBusqueda() {
         ListView listView=findViewById(R.id.lista);
         lista=new ArrayList<>();
@@ -219,7 +269,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 @Override
                 public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
                     List<Fuentes>fuente=response.body();
-                    for(Fuentes fuentes:fuente){
+                    for(Fuentes fuentes : fuente){
                         barriosUnicos.add(fuentes.getBarrio());
                     }
                     for(String barrios:barriosUnicos){
@@ -249,13 +299,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                                 if (query != null && query.equalsIgnoreCase(fuentes.getBarrio())) {
                                     LatLng latLng = new LatLng(fuentes.getLatitud(), fuentes.getLongitud());
 
-                                    // Agregar marcador
-                                    Marker marker = Map.addMarker(new MarkerOptions()
-                                            .position(latLng)
-                                            .title(fuentes.getNomVia())
-                                            .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
-
-                                    searchMarkers.put(fuentes.getNomVia(), marker);
+                                    String estado = fuentes.getEstado();
+                                    searchMarkers.put(fuentes.getNomVia(), addMarker(fuentes,estado));
                                     boundsBuilder.include(latLng);
                                     found = true;
                                 }
@@ -306,14 +351,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         for (Fuentes fuentes : fuente) {
                             if (selectedItem.equalsIgnoreCase(fuentes.getBarrio())) {
                                 LatLng latLng = new LatLng(fuentes.getLatitud(), fuentes.getLongitud());
-
-                                // Agregar marcador
-                                Marker marker = Map.addMarker(new MarkerOptions()
-                                        .position(latLng)
-                                        .title(fuentes.getNomVia())
-                                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
-
-                                searchMarkers.put(fuentes.getNomVia(), marker);
+                                String estado = fuentes.getEstado();
+                                searchMarkers.put(fuentes.getNomVia(), addMarker(fuentes,estado));
                                 boundsBuilder.include(latLng);
                                 found = true;
                             }
@@ -360,12 +399,14 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         });
     }
 
+
     private void hideKeyboard(View view) {
         InputMethodManager inputMethodManager = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
         if (inputMethodManager != null) {
             inputMethodManager.hideSoftInputFromWindow(view.getWindowToken(), 0);
         }
     }
+
 
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
@@ -380,6 +421,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                             | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
         }
     }
+
 
     @Override
     public void onMapReady(@NonNull GoogleMap googleMap) {
@@ -396,6 +438,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         configureLocationUpdates();
     }
+
+
     private void configureLocationUpdates() {
         LocationRequest locationRequest = LocationRequest.create()
                 .setInterval(10000) // Cada 10 segundos
@@ -433,8 +477,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 t.printStackTrace(); // Manejo de errores
             }
         });
-
     }
+
+
     private void actualizarMarcadores(List<Fuentes> fuentesCercanas) {
         HashMap<String, Marker> updatedMarkers = new HashMap<>();
 
@@ -446,31 +491,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 updatedMarkers.put(key, currentMarkers.get(key));
             } else {
                 // Crear nuevo marcador
-                LatLng latLng = new LatLng(fuente.getLatitud(), fuente.getLongitud());
-                String estado = fuente.getEstado();
-                Marker marker = null;
-                switch(estado){
-                    case "OPERATIVO":
-                         marker = Map.addMarker(new MarkerOptions()
-                                .position(latLng)
-                                .title(fuente.getNomVia())
-                                .icon(getCustomMarker(R.drawable.markeroperative)));
-                         break;
-                    case "CERRADA_TEMPORALMENT":
-                        marker = Map.addMarker(new MarkerOptions()
-                                .position(latLng)
-                                .title(fuente.getNomVia())
-                                .icon(getCustomMarker(R.drawable.markermaintenance)));
-                        break;
-                    case "FUERA_DE_SERVICIO":
-                        marker = Map.addMarker(new MarkerOptions()
-                                .position(latLng)
-                                .title(fuente.getNomVia())
-                                .icon(getCustomMarker(R.drawable.markerclosed)));
-                        break;
-                }
 
-                updatedMarkers.put(key, marker);
+                String estado = fuente.getEstado();
+                updatedMarkers.put(key, addMarker(fuente,estado));
             }
         }
 
@@ -483,6 +506,33 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         currentMarkers = updatedMarkers; // Actualizar lista de marcadores
     }
+
+    private Marker addMarker(Fuentes fuente,String estado){
+        LatLng latLng = new LatLng(fuente.getLatitud(), fuente.getLongitud());
+        Marker marker = null;
+        switch(estado){
+            case "OPERATIVO":
+                marker = Map.addMarker(new MarkerOptions()
+                        .position(latLng)
+                        .title(fuente.getNomVia())
+                        .icon(getCustomMarker(R.drawable.markeroperative)));
+                break;
+            case "CERRADA_TEMPORALMENT":
+                marker = Map.addMarker(new MarkerOptions()
+                        .position(latLng)
+                        .title(fuente.getNomVia())
+                        .icon(getCustomMarker(R.drawable.markermaintenance)));
+                break;
+            case "FUERA_DE_SERVICIO":
+                marker = Map.addMarker(new MarkerOptions()
+                        .position(latLng)
+                        .title(fuente.getNomVia())
+                        .icon(getCustomMarker(R.drawable.markerclosed)));
+                break;
+        }
+        return marker;
+    }
+
     // Método para filtrar fuentes cercanas
     private List<Fuentes> filtrarFuentesCercanas(List<Fuentes> fuentes, Location userLocation) {
         List<Fuentes> fuentesCercanas = new ArrayList<>();
@@ -501,13 +551,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
         return fuentesCercanas;
     }
-
-
-
-
-
-
-
 
 
     private List<String> selectedPetPeopleFilters = new ArrayList<>();  // Store selected pet/people filters
@@ -533,136 +576,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         applyFilters();  // Apply the updated list of filters
     }
 
-    // Apply the current filters
-    private void applyFilters() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            Toast.makeText(this, "Permiso de ubicación no concedido", Toast.LENGTH_SHORT).show();
-            return;
-        }
 
-        fusedLocationProviderClient.getLastLocation().addOnSuccessListener(location -> {
-            if (location == null) {
-                Toast.makeText(this, "No se pudo obtener la ubicación actual", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            // Call API after getting location
-            ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
-            apiService.getFuentes().enqueue(new Callback<List<Fuentes>>() {
-                @Override
-                public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
-                    if (response.isSuccessful() && response.body() != null) {
-                        // Filter sources using the selected filters
-                        List<Fuentes> filteredFuentes = filterFuentes(response.body(), location);
-                        actualizarMarcadores(filteredFuentes);
-                    }
-                }
-
-                @Override
-                public void onFailure(Call<List<Fuentes>> call, Throwable t) {
-                    t.printStackTrace();
-                    Toast.makeText(MainActivity.this, "Error al obtener fuentes", Toast.LENGTH_SHORT).show();
-                }
-            });
-        });
-    }
-
-    // Modify the filterFuentes method to handle multiple filters (exclusive)
-    private List<Fuentes> filterFuentes(List<Fuentes> fuentes, Location userLocation) {
-        List<Fuentes> fuentesCercanas = new ArrayList<>();
-
-        for (Fuentes fuente : fuentes) {
-            boolean matchesPetPeopleFilter = selectedPetPeopleFilters.isEmpty() || selectedPetPeopleFilters.stream().anyMatch(filter ->
-                    fuente.getUso().contains(filter)
-            );
-
-            boolean matchesStatusFilter = selectedStatusFilters.isEmpty() || selectedStatusFilters.stream().anyMatch(filter ->
-                    fuente.getEstado().equalsIgnoreCase(filter)
-            );
-
-            // Get the location of each source
-            Location fuenteLocation = new Location("");
-            fuenteLocation.setLatitude(fuente.getLatitud());
-            fuenteLocation.setLongitude(fuente.getLongitud());
-
-            // Calculate the distance between the user and the source
-            float distance = userLocation.distanceTo(fuenteLocation);
-
-            // Apply the filters: distance and matching filters (exclusive)
-            if (distance <= RADIUS_METERS && matchesPetPeopleFilter && matchesStatusFilter) {
-                fuentesCercanas.add(fuente);
-            }
-        }
-        return fuentesCercanas;
-    }
-
-
-
-
-
-
-
-
-
-    //Filtro de las Fuentes
-    private List<Fuentes> filterFuentes(List<Fuentes> fuentes, String filter, Location userLocation) {
-        List<Fuentes> fuentesCercanas = new ArrayList<>();
-
-        for (Fuentes fuente : fuentes) {
-            // Entre todas las fuentes fitra segun lo que se pide
-            boolean matchesEstado = fuente.getEstado().equalsIgnoreCase(filter);
-            boolean matchesUso = fuente.getUso().contains(filter);
-
-            // Busca la localizacion de cada fuente
-            Location fuenteLocation = new Location("");
-            fuenteLocation.setLatitude(fuente.getLatitud());
-            fuenteLocation.setLongitude(fuente.getLongitud());
-
-            // Calcula la distancia entre el usuario y la fuente
-            float distancia = userLocation.distanceTo(fuenteLocation);
-
-            // Filtro de las fuentes
-            // Por ESTADO o por USO
-            if (distancia <= RADIUS_METERS && (matchesEstado || matchesUso) || (matchesUso && matchesEstado)) { // Radio de 2 km
-                fuentesCercanas.add(fuente);
-            }
-        }
-
-        return fuentesCercanas;
-    }
-
-    private void applyFilter(String filter) {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            Toast.makeText(this, "Permiso de ubicación no concedido", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        fusedLocationProviderClient.getLastLocation().addOnSuccessListener(location -> {
-            if (location == null) {
-                Toast.makeText(this, "No se pudo obtener la ubicación actual", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            // Llamar a la API después de obtener la ubicación
-            ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
-            apiService.getFuentes().enqueue(new Callback<List<Fuentes>>() {
-                @Override
-                public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
-                    if (response.isSuccessful() && response.body() != null) {
-                        // Filtrar fuentes usando la ubicación obtenida
-                        List<Fuentes> filteredFuentes = filterFuentes(response.body(), filter, location);
-                        actualizarMarcadores(filteredFuentes);
-                    }
-                }
-
-                @Override
-                public void onFailure(Call<List<Fuentes>> call, Throwable t) {
-                    t.printStackTrace();
-                    Toast.makeText(MainActivity.this, "Error al obtener fuentes", Toast.LENGTH_SHORT).show();
-                }
-            });
-        });
-    }
 
     private void getDeviceLocation(){
         try{
