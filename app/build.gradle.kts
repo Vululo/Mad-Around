@@ -14,6 +14,10 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        val apiKey: String = project.findProperty("MAPS_API_KEY") as String? ?: ""
+
+        buildConfigField("String", "GOOGLE_MAPS_API_KEY", "\"$apiKey\"")
+        resValue("string", "google_maps_key", apiKey)
     }
 
     buildTypes {
@@ -28,6 +32,9 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
+    }
+    buildFeatures {
+        buildConfig = true
     }
 }
 
