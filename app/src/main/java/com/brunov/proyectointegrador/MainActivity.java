@@ -69,11 +69,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private HashMap<String, Marker> currentMarkers = new HashMap<>();
     private HashMap<String,Marker> searchMarkers = new HashMap<>();
 
-
-    private ListView listview;
     private ArrayAdapter<String> adapter;
     private List<String> lista;
     private Set<String> barriosUnicos;
+    private Set<String> estadosSeleccionados = new HashSet<>();
+    private Set<String> categoriasSeleccionadas = new HashSet<>();
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -98,74 +99,33 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         pet.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                petClick=!petClick;
-                togglePetPeopleFilter("MASCOTAS");
-
-                if(petClick){
-                    Toast.makeText(MainActivity.this,"Mascotas",Toast.LENGTH_SHORT).show();
-                    pet.setBackground(getDrawable(R.drawable.paw2));
-                }else{
-                    pet.setBackground(getDrawable(R.drawable.paw1));
-
-                }
+                toggleCategoria("MASCOTAS", pet, R.drawable.paw2, R.drawable.paw1);
             }
         });
 
         people.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                peopleClick=!peopleClick;
-                togglePetPeopleFilter("PERSONAS");
-
-                if(peopleClick){
-                Toast.makeText(MainActivity.this,"Personas",Toast.LENGTH_SHORT).show();
-                    people.setBackground(getDrawable(R.drawable.people2));
-                }else{
-                    people.setBackground(getDrawable(R.drawable.people1));
-                }
+                toggleCategoria("PERSONAS", people, R.drawable.people2, R.drawable.people1);
             }
         });
 
         available.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                operativeClick=!operativeClick;
-                toggleStatusFilter("OPERATIVO");
-
-                if(operativeClick){
-                    Toast.makeText(MainActivity.this,"Operativo",Toast.LENGTH_SHORT).show();
-                    available.setBackground(getDrawable(R.drawable.enabled2));
-                }else{
-                    available.setBackground(getDrawable(R.drawable.enabled1));
-                }
+                toggleEstado("OPERATIVO", available, R.drawable.enabled2, R.drawable.enabled1);
             }
         });
         maintenance.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                maintenaceClick=!maintenaceClick;
-                toggleStatusFilter("CERRADA_TEMPORALMENT");
-
-                if(maintenaceClick){
-                    Toast.makeText(MainActivity.this,"En mantenimiento",Toast.LENGTH_SHORT).show();
-                    maintenance.setBackground(getDrawable(R.drawable.maintenance2));
-                }else{
-                    maintenance.setBackground(getDrawable(R.drawable.maintenance1));
-                }
+                toggleEstado("CERRADA_TEMPORALMENT", maintenance, R.drawable.maintenance2, R.drawable.maintenance1);
             }
         });
         disabled.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                disabledClick = !disabledClick;
-                toggleStatusFilter("FUERA_DE_SERVICIO");
-
-                if(disabledClick) {
-                    Toast.makeText(MainActivity.this, "Fuera de Servicio", Toast.LENGTH_SHORT).show();
-                    disabled.setBackground(getDrawable(R.drawable.disabled2));
-                }else{
-                    disabled.setBackground(getDrawable(R.drawable.disabled1));
-                }
+                toggleEstado("FUERA_DE_SERVICIO", disabled, R.drawable.disabled2, R.drawable.disabled1);
             }
         });
 
@@ -177,68 +137,56 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         });
     }
 
-    //todo
-    // Apply the current filters
-    private void applyFilters() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            Toast.makeText(this, "Permiso de ubicación no concedido", Toast.LENGTH_SHORT).show();
-            return;
+    // Método para manejar los estados de las fuentes
+    private void toggleEstado(String estado, Button button, int activeDrawable, int inactiveDrawable) {
+        if (estadosSeleccionados.contains(estado)) {
+            estadosSeleccionados.remove(estado);
+            button.setBackground(getDrawable(inactiveDrawable));
+        } else {
+            estadosSeleccionados.add(estado);
+            button.setBackground(getDrawable(activeDrawable));
         }
+        actualizarMarcadoresFiltrados();
+    }
 
-        fusedLocationProviderClient.getLastLocation().addOnSuccessListener(location -> {
-            if (location == null) {
-                Toast.makeText(this, "No se pudo obtener la ubicación actual", Toast.LENGTH_SHORT).show();
-                return;
-            }
+    // Método para manejar las categorías (Mascotas y Personas)
+    private void toggleCategoria(String categoria, Button button, int activeDrawable, int inactiveDrawable) {
+        if (categoriasSeleccionadas.contains(categoria)) {
+            categoriasSeleccionadas.remove(categoria);
+            button.setBackground(getDrawable(inactiveDrawable));
+        } else {
+            categoriasSeleccionadas.add(categoria);
+            button.setBackground(getDrawable(activeDrawable));
+        }
+        actualizarMarcadoresFiltrados();
+    }
 
-            // Call API after getting location
-            ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
-            apiService.getFuentes().enqueue(new Callback<List<Fuentes>>() {
-                @Override
-                public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
-                    if (response.isSuccessful() && response.body() != null) {
-                        // Filter sources using the selected filters
-                        List<Fuentes> filteredFuentes = filterFuentes(response.body());
-                        actualizarMarcadores(filteredFuentes);
+    // Método para actualizar los marcadores según los filtros activos
+    private void actualizarMarcadoresFiltrados() {
+        Map.clear(); // Limpiar los marcadores actuales
+
+        ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
+        apiService.getFuentes().enqueue(new Callback<List<Fuentes>>() {
+            @Override
+            public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
+                List<Fuentes> fuentes = response.body();
+
+                for (Fuentes fuente : fuentes) {
+                    boolean estadoCoincide = estadosSeleccionados.isEmpty() || estadosSeleccionados.contains(fuente.getEstado());
+                    boolean categoriaCoincide = categoriasSeleccionadas.isEmpty() || (categoriasSeleccionadas.contains("MASCOTAS")) || (categoriasSeleccionadas.contains("PERSONAS"));
+
+                    if (estadoCoincide && categoriaCoincide) {
+                        addMarker(fuente, fuente.getEstado());
                     }
                 }
+            }
 
-                @Override
-                public void onFailure(Call<List<Fuentes>> call, Throwable t) {
-                    t.printStackTrace();
-                    Toast.makeText(MainActivity.this, "Error al obtener fuentes", Toast.LENGTH_SHORT).show();
-                }
-            });
+            @Override
+            public void onFailure(Call<List<Fuentes>> call, Throwable t) {
+                t.printStackTrace();
+            }
         });
     }
-    //todo
-    // Modify the filterFuentes method to handle multiple filters (exclusive)
-    private List<Fuentes> filterFuentes(List<Fuentes> fuentes) {
-        List<Fuentes> fuentesCercanas = new ArrayList<>();
-
-        for (Fuentes fuente : fuentes) {
-            boolean matchesPetPeopleFilter = selectedPetPeopleFilters.isEmpty() || selectedPetPeopleFilters.stream().anyMatch(filter ->
-                    fuente.getUso().contains(filter)
-            );
-
-            boolean matchesStatusFilter = selectedStatusFilters.isEmpty() || selectedStatusFilters.stream().anyMatch(filter ->
-                    fuente.getEstado().equalsIgnoreCase(filter)
-            );
-
-            // Get the location of each source
-            Location fuenteLocation = new Location("");
-            fuenteLocation.setLatitude(fuente.getLatitud());
-            fuenteLocation.setLongitude(fuente.getLongitud());
-
-            // Apply the filters: distance and matching filters (exclusive)
-            if (matchesPetPeopleFilter && matchesStatusFilter) {
-                fuentesCercanas.add(fuente);
-            }
-        }
-        return fuentesCercanas;
-    }
-
-
 
     private void BarraDeBusqueda() {
         ListView listView=findViewById(R.id.lista);
@@ -369,27 +317,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         // Ocultar el ListView después de la selección
                         listView.setVisibility(View.GONE);
                     });
-                    /*
-                    // Agregar solo los marcadores del barrio buscado
-                            for (Fuentes fuentes : fuente) {
-                                if (query != null && query.equalsIgnoreCase(fuentes.getBarrio())) {
-                                    LatLng latLng = new LatLng(fuentes.getLatitud(), fuentes.getLongitud());
-                                    Map.addMarker(new MarkerOptions()
-                                            .position(latLng)
-                                            .title(fuentes.getNomVia())
-                                            .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
-
-                                    Map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 14));
-                                }
-                            }
-                            listView.setVisibility(View.GONE);
-                            // Ocultar el teclado
-                            hideKeyboard(searchView);
-                            return true;
-                    */
-
-
-
                 }
                 @Override
                 public void onFailure(Call<List<Fuentes>> call, Throwable t) {
@@ -398,30 +325,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             });
         });
     }
-
-
-    private void hideKeyboard(View view) {
-        InputMethodManager inputMethodManager = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
-        if (inputMethodManager != null) {
-            inputMethodManager.hideSoftInputFromWindow(view.getWindowToken(), 0);
-        }
-    }
-
-
-    @Override
-    public void onWindowFocusChanged(boolean hasFocus) {
-        super.onWindowFocusChanged(hasFocus);
-        if (hasFocus) {
-            getWindow().getDecorView().setSystemUiVisibility(
-                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                            | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                            | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                            | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                            | View.SYSTEM_UI_FLAG_FULLSCREEN
-                            | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
-        }
-    }
-
 
     @Override
     public void onMapReady(@NonNull GoogleMap googleMap) {
@@ -439,45 +342,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         configureLocationUpdates();
     }
 
-
-    private void configureLocationUpdates() {
-        LocationRequest locationRequest = LocationRequest.create()
-                .setInterval(10000) // Cada 10 segundos
-                .setFastestInterval(5000) // Intervalo más rápido posible
-                .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-
-        LocationCallback locationCallback = new LocationCallback() {
-            @Override
-            public void onLocationResult(@NonNull LocationResult locationResult) {
-                Location userLocation = locationResult.getLastLocation();
-                if (userLocation != null) {
-                    updateMapWithUserLocation(userLocation);
-                }
-            }
-        };
-
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallback, getMainLooper());
-        }
-    }
-
-    private void updateMapWithUserLocation(Location userLocation) {
-        ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
-        apiService.getFuentes().enqueue(new Callback<List<Fuentes>>() {
-            @Override
-            public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    List<Fuentes> fuentesCercanas = filtrarFuentesCercanas(response.body(), userLocation);
-                    actualizarMarcadores(fuentesCercanas);
-                }
-            }
-
-            @Override
-            public void onFailure(Call<List<Fuentes>> call, Throwable t) {
-                t.printStackTrace(); // Manejo de errores
-            }
-        });
-    }
 
 
     private void actualizarMarcadores(List<Fuentes> fuentesCercanas) {
@@ -553,30 +417,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
 
-    private List<String> selectedPetPeopleFilters = new ArrayList<>();  // Store selected pet/people filters
-    private List<String> selectedStatusFilters = new ArrayList<>();  // Store selected available/maintenance/disabled filters
-
-    // Toggle pet/people filter (add or remove from the list)
-    private void togglePetPeopleFilter(String filter) {
-        if (selectedPetPeopleFilters.contains(filter)) {
-            selectedPetPeopleFilters.remove(filter);  // Remove if already added
-        } else {
-            selectedPetPeopleFilters.add(filter);  // Add if not already present
-        }
-        applyFilters();  // Apply the updated list of filters
-    }
-
-    // Toggle available/maintenance/disabled filter (add or remove from the list)
-    private void toggleStatusFilter(String filter) {
-        if (selectedStatusFilters.contains(filter)) {
-            selectedStatusFilters.remove(filter);  // Remove if already added
-        } else {
-            selectedStatusFilters.add(filter);  // Add if not already present
-        }
-        applyFilters();  // Apply the updated list of filters
-    }
-
-
 
     private void getDeviceLocation(){
         try{
@@ -639,5 +479,65 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         return BitmapDescriptorFactory.fromBitmap(bitmap);
     }
 
+    private void hideKeyboard(View view) {
+        InputMethodManager inputMethodManager = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+        if (inputMethodManager != null) {
+            inputMethodManager.hideSoftInputFromWindow(view.getWindowToken(), 0);
+        }
+    }
+
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus) {
+            getWindow().getDecorView().setSystemUiVisibility(
+                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                            | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                            | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                            | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                            | View.SYSTEM_UI_FLAG_FULLSCREEN
+                            | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+        }
+    }
+
+    private void configureLocationUpdates() {
+        LocationRequest locationRequest = LocationRequest.create()
+                .setInterval(10000) // Cada 10 segundos
+                .setFastestInterval(5000) // Intervalo más rápido posible
+                .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+
+        LocationCallback locationCallback = new LocationCallback() {
+            @Override
+            public void onLocationResult(@NonNull LocationResult locationResult) {
+                Location userLocation = locationResult.getLastLocation();
+                if (userLocation != null) {
+                    updateMapWithUserLocation(userLocation);
+                }
+            }
+        };
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallback, getMainLooper());
+        }
+    }
+
+    private void updateMapWithUserLocation(Location userLocation) {
+        ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
+        apiService.getFuentes().enqueue(new Callback<List<Fuentes>>() {
+            @Override
+            public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    List<Fuentes> fuentesCercanas = filtrarFuentesCercanas(response.body(), userLocation);
+                    actualizarMarcadores(fuentesCercanas);
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<Fuentes>> call, Throwable t) {
+                t.printStackTrace(); // Manejo de errores
+            }
+        });
+    }
 
 }
