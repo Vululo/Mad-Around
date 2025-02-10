@@ -60,7 +60,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private GoogleMap Map;
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
     private FusedLocationProviderClient fusedLocationProviderClient;
-    private ListView listview;
+    private ListView listView;
     private ArrayAdapter<String> adapter;
     private List<String> lista;
     private Set<String> barriosUnicos;
@@ -71,7 +71,23 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
-        ListView listView=findViewById(R.id.lista);
+        //Configuracion y funcionalidad de la barra de busqueda
+        barrabusqueda();
+
+        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
+        mapFragment.getMapAsync(this);
+
+
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
+            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
+            return insets;
+        });
+    }
+
+    private void barrabusqueda(){
+        listView=findViewById(R.id.lista);
         lista=new ArrayList<>();
         barriosUnicos=new HashSet<>();
 
@@ -86,7 +102,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
             searchView.setIconified(false);
             listView.setVisibility(View.VISIBLE);
-
 
             ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
             apiService.getFuentes().enqueue(new Callback<List<Fuentes>>() {
@@ -145,27 +160,13 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         searchView.setQuery(selectedItem, false); // Mostrar selección en SearchView
                         // Ocultar el ListView
                         listView.setVisibility(View.GONE);
-                        // Colapsar el SearchView
-                        //searchView.setIconified(true);
                     });
-
                 }
                 @Override
                 public void onFailure(Call<List<Fuentes>> call, Throwable t) {
                     t.printStackTrace(); // Manejo de errores
                 }
             });
-        });
-
-        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
-        mapFragment.getMapAsync(this);
-
-
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-            return insets;
         });
     }
 
