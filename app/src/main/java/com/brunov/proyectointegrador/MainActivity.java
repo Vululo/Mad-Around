@@ -313,7 +313,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         for (Fuentes fuente : fuentesBusqueda) {
             boolean estadoCoincide = estadosSeleccionados.isEmpty() || estadosSeleccionados.contains(fuente.getEstado());
-            boolean categoriaCoincide = categoriasSeleccionadas.isEmpty() || categoriasSeleccionadas.contains("MASCOTAS") || categoriasSeleccionadas.contains("PERSONAS");
+            boolean categoriaCoincide = categoriasSeleccionadas.isEmpty() ||
+                    (fuente.getUso().equals("MASCOTAS") && categoriasSeleccionadas.contains("MASCOTAS")) ||
+                    (fuente.getUso().equals("PERSONAS") && categoriasSeleccionadas.contains("PERSONAS")) ||(fuente.getUso().contains("PERSONAS_Y_MASCOTAS"));
 
             if (estadoCoincide && categoriaCoincide) {
                 addMarker(fuente, fuente.getEstado());
@@ -358,7 +360,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 updatedMarkers.put(key, currentMarkers.get(key));
             } else {
                 // Crear nuevo marcador
-
                 String estado = fuente.getEstado();
                 updatedMarkers.put(key, addMarker(fuente,estado));
             }
