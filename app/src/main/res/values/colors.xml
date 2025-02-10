@@ -3,5 +3,8 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="lightBlue">#3DD1F2</color>
-    <color name="azulito">#C3DFE4</color>
+    <color name="azulito">#3DD1F2</color>
+    <color name="naranja">#F2A007</color>
+    <color name="gris_claro">#C8C8C8</color>
+    <color name="gris">#4E4E4E</color>
 </resources>

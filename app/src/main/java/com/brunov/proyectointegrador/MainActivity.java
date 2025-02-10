@@ -1,6 +1,8 @@
 package com.brunov.proyectointegrador;
 
 import android.content.pm.PackageManager;
+import android.graphics.PorterDuff;
+import android.graphics.drawable.Drawable;
 import android.health.connect.datatypes.ExerciseRoute;
 import android.location.Location;
 import android.os.Bundle;
@@ -11,6 +13,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
+import androidx.core.graphics.drawable.DrawableCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
@@ -99,8 +102,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
                 // Detectar deslizamiento hacia arriba (swipe up)
                 if (e2.getY() < e1.getY()) { // Si el deslizamiento es hacia arriba
-                        dialog.show(); // Realizar acción
-                        return true;
+                    dialog.show(); // Realizar acción
+                    return true;
                 }
                 return false;
             }
@@ -225,19 +228,34 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 LinearLayout.LayoutParams.WRAP_CONTENT
         );
 
-        layoutParams.setMargins(0,0,0,5);
+        layoutParams.setMargins(0,0,0,15);
         newItemContainer.setLayoutParams(layoutParams);
 
         newItemContainer.setBackgroundResource(R.drawable.item_border);
 
         // Crear la imagen
+       // String estado=fuente.getEstado();
+
         ImageView imageView = new ImageView(MainActivity.this);
-        imageView.setImageResource(R.drawable.icono_ubi);  // Aquí puedes cambiarlo por la imagen que desees
+        imageView.setImageResource(R.drawable.icono_ubi);// Aquí puedes cambiarlo por la imagen que desees
+        Drawable drawable = imageView.getDrawable();
+        if(fuente.getEstado().equalsIgnoreCase("OPERATIVO")) {
+            DrawableCompat.setTint(drawable, ContextCompat.getColor(this, R.color.azulito));
+            imageView.setImageDrawable(drawable);
+        }
+        else if(fuente.getEstado().equalsIgnoreCase("CERRADA_TEMPORALMENT")) {
+            DrawableCompat.setTint(drawable, ContextCompat.getColor(this, R.color.naranja));
+            imageView.setImageDrawable(drawable);
+        }
+        else if(fuente.getEstado().equalsIgnoreCase("FUERA_DE_SERVICIO")) {
+            DrawableCompat.setTint(drawable, ContextCompat.getColor(this, R.color.gris_claro));
+            imageView.setImageDrawable(drawable);
+        }
         imageView.setLayoutParams(new LinearLayout.LayoutParams(120, 120));  // Tamaño de la imagen
 
         // Crear el TextView para el texto
         TextView textView = new TextView(MainActivity.this);
-        textView.setText("Nombre de la vía: " + fuente.getNomVia());
+        textView.setText(fuente.getNomVia());
         textView.setTextSize(18);
         textView.setTextColor(getResources().getColor(R.color.black));
         textView.setPadding(16, 0, 0, 0);  // Espaciado entre la imagen y el texto

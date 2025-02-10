@@ -44,4 +44,5 @@ dependencies {
     implementation("com.google.android.gms:play-services-maps:19.0.0")
     implementation ("com.squareup.retrofit2:retrofit:2.9.0")
     implementation ("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation ("com.google.android.material:material:1.6.0")
 }

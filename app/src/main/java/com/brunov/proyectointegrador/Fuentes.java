@@ -8,7 +8,7 @@ public class Fuentes {
     private String BARRIO;
     private String codDistrito;
     private String distrito;
-    private String estado;
+    private String ESTADO;
     private double coordGisX;
     private double coordGisY;
     private String sistemaCoord;
@@ -46,8 +46,8 @@ public class Fuentes {
     public String getDistrito() { return distrito; }
     public void setDistrito(String distrito) { this.distrito = distrito; }
 
-    public String getEstado() { return estado; }
-    public void setEstado(String estado) { this.estado = estado; }
+    public String getEstado() { return ESTADO; }
+    public void setEstado(String ESTADO) { this.ESTADO = ESTADO; }
 
     public double getCoordGisX() { return coordGisX; }
     public void setCoordGisX(double coordGisX) { this.coordGisX = coordGisX; }
