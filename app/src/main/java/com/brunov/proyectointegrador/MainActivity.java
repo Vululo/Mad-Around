@@ -64,7 +64,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
     private static final int RADIUS_METERS = 500; // Radio en metros (500 m)
     private FusedLocationProviderClient fusedLocationProviderClient;
-    private boolean petClick,peopleClick,maintenaceClick,disabledClick,operativeClick = false;
 
     private HashMap<String, Marker> currentMarkers = new HashMap<>();
     private HashMap<String,Marker> searchMarkers = new HashMap<>();
@@ -344,6 +343,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         Map.setLatLngBoundsForCameraTarget(mapBounds);
         Map.setMinZoomPreference(10);
         Map.setMaxZoomPreference(17);
+
+        // Deshabilitar el botón de ubicación del usuario
+        Map.getUiSettings().setMyLocationButtonEnabled(false);
+
         // Solicitar permisos
         requestLocationPermission();
 
