@@ -74,9 +74,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private Set<String> barriosUnicos;
     private Set<String> estadosSeleccionados = new HashSet<>();
     private Set<String> categoriasSeleccionadas = new HashSet<>();
-    private List<Fuentes> fuentesBusqueda; // Almacena las fuentes del último barrio buscado
-
-
+    private List<Fuentes> fuentesBusqueda;
+    private List<Fuentes> fuentesCercanas;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -304,32 +303,61 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         });
     }
 
-    // Método para actualizar los marcadores filtrados
     private void actualizarMarcadoresFiltrados() {
         Map.clear(); // Limpiar los marcadores actuales
-
+        HashMap<String, Marker> updatedMarkers = new HashMap<>();
         LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder();
         boolean found = false;
 
-        for (Fuentes fuente : fuentesBusqueda) {
-            boolean estadoCoincide = estadosSeleccionados.isEmpty() || estadosSeleccionados.contains(fuente.getEstado());
-            boolean categoriaCoincide = categoriasSeleccionadas.isEmpty() ||
-                    (fuente.getUso().equals("MASCOTAS") && categoriasSeleccionadas.contains("MASCOTAS")) ||
-                    (fuente.getUso().equals("PERSONAS") && categoriasSeleccionadas.contains("PERSONAS")) ||(fuente.getUso().contains("PERSONAS_Y_MASCOTAS"));
+        List<Fuentes> fuentesFiltradas = new ArrayList<>();
 
-            if (estadoCoincide && categoriaCoincide) {
-                addMarker(fuente, fuente.getEstado());
+        // Filtrar las fuentes según la búsqueda o la ubicación
+        if (!searchMarkers.isEmpty()) {
+            // Si hay búsqueda activa, filtramos las fuentes de la búsqueda
+            for (Fuentes fuente : fuentesBusqueda) {
+                if (cumpleFiltros(fuente)) {
+                    fuentesFiltradas.add(fuente);
+                }
+            }
+        } else {
+            // Si no hay búsqueda, filtramos las fuentes cercanas a la ubicación del usuario
+            for (Fuentes fuente : fuentesCercanas) {
+                if (cumpleFiltros(fuente)) {
+                    fuentesFiltradas.add(fuente);
+                }
+            }
+        }
+
+        // Agregar los marcadores filtrados al mapa
+        for (Fuentes fuente : fuentesFiltradas) {
+            Marker marker = addMarker(fuente, fuente.getEstado());
+            if (marker != null) {
+                updatedMarkers.put(fuente.getNomVia(), marker);
                 boundsBuilder.include(new LatLng(fuente.getLatitud(), fuente.getLongitud()));
                 found = true;
             }
         }
 
+        // Ajustar la cámara si se encontraron fuentes
         if (found) {
             Map.animateCamera(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 100));
         } else {
             Toast.makeText(MainActivity.this, "No se encontraron fuentes con estos filtros", Toast.LENGTH_SHORT).show();
         }
+
+        currentMarkers = updatedMarkers; // Actualizar la lista de marcadores
     }
+
+
+    private boolean cumpleFiltros(Fuentes fuente) {
+        boolean estadoCoincide = estadosSeleccionados.isEmpty() || estadosSeleccionados.contains(fuente.getEstado());
+        boolean categoriaCoincide = categoriasSeleccionadas.isEmpty() ||
+                (fuente.getUso().equals("MASCOTAS") && categoriasSeleccionadas.contains("MASCOTAS")) ||
+                (fuente.getUso().equals("PERSONAS") && categoriasSeleccionadas.contains("PERSONAS")) ||(fuente.getUso().contains("PERSONAS_Y_MASCOTAS"));
+
+        return estadoCoincide && categoriaCoincide;
+    }
+
 
     @Override
     public void onMapReady(@NonNull GoogleMap googleMap) {
@@ -346,8 +374,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         configureLocationUpdates();
     }
-
-
 
     private void actualizarMarcadores(List<Fuentes> fuentesCercanas) {
         HashMap<String, Marker> updatedMarkers = new HashMap<>();
@@ -403,7 +429,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     // Método para filtrar fuentes cercanas
     private List<Fuentes> filtrarFuentesCercanas(List<Fuentes> fuentes, Location userLocation) {
-        List<Fuentes> fuentesCercanas = new ArrayList<>();
+        fuentesCercanas = new ArrayList<>();
         for (Fuentes fuente : fuentes) {
             Location fuenteLocation = new Location("");
             fuenteLocation.setLatitude(fuente.getLatitud());
