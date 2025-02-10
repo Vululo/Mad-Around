@@ -74,6 +74,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private Set<String> barriosUnicos;
     private Set<String> estadosSeleccionados = new HashSet<>();
     private Set<String> categoriasSeleccionadas = new HashSet<>();
+    private List<Fuentes> fuentesBusqueda; // Almacena las fuentes del último barrio buscado
+
 
 
     @Override
@@ -161,37 +163,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         actualizarMarcadoresFiltrados();
     }
 
-    // Método para actualizar los marcadores según los filtros activos
-    private void actualizarMarcadoresFiltrados() {
-        Map.clear(); // Limpiar los marcadores actuales
-
-        ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
-        apiService.getFuentes().enqueue(new Callback<List<Fuentes>>() {
-            @Override
-            public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
-                List<Fuentes> fuentes = response.body();
-
-                for (Fuentes fuente : fuentes) {
-                    boolean estadoCoincide = estadosSeleccionados.isEmpty() || estadosSeleccionados.contains(fuente.getEstado());
-                    boolean categoriaCoincide = categoriasSeleccionadas.isEmpty() || (categoriasSeleccionadas.contains("MASCOTAS")) || (categoriasSeleccionadas.contains("PERSONAS"));
-
-                    if (estadoCoincide && categoriaCoincide) {
-                        addMarker(fuente, fuente.getEstado());
-                    }
-                }
-            }
-
-            @Override
-            public void onFailure(Call<List<Fuentes>> call, Throwable t) {
-                t.printStackTrace();
-            }
-        });
-    }
 
     private void BarraDeBusqueda() {
         ListView listView=findViewById(R.id.lista);
         lista=new ArrayList<>();
         barriosUnicos=new HashSet<>();
+        fuentesBusqueda = new ArrayList<>();
 
         SearchView searchView = findViewById(R.id.busqueda);
         EditText searchEditText = searchView.findViewById(androidx.appcompat.R.id.search_src_text);
@@ -208,7 +185,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         searchView.setOnClickListener(v -> {
             barriosUnicos.clear(); // Limpiar el Set de barrios únicos
             lista.clear();
-
+            fuentesBusqueda.clear();
             searchView.setIconified(false);
             listView.setVisibility(View.VISIBLE);
 
@@ -246,7 +223,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                             for (Fuentes fuentes : fuente) {
                                 if (query != null && query.equalsIgnoreCase(fuentes.getBarrio())) {
                                     LatLng latLng = new LatLng(fuentes.getLatitud(), fuentes.getLongitud());
-
+                                    fuentesBusqueda.add(fuentes);
                                     String estado = fuentes.getEstado();
                                     searchMarkers.put(fuentes.getNomVia(), addMarker(fuentes,estado));
                                     boundsBuilder.include(latLng);
@@ -300,6 +277,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                             if (selectedItem.equalsIgnoreCase(fuentes.getBarrio())) {
                                 LatLng latLng = new LatLng(fuentes.getLatitud(), fuentes.getLongitud());
                                 String estado = fuentes.getEstado();
+                                fuentesBusqueda.add(fuentes);
                                 searchMarkers.put(fuentes.getNomVia(), addMarker(fuentes,estado));
                                 boundsBuilder.include(latLng);
                                 found = true;
@@ -324,6 +302,31 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 }
             });
         });
+    }
+
+    // Método para actualizar los marcadores filtrados
+    private void actualizarMarcadoresFiltrados() {
+        Map.clear(); // Limpiar los marcadores actuales
+
+        LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder();
+        boolean found = false;
+
+        for (Fuentes fuente : fuentesBusqueda) {
+            boolean estadoCoincide = estadosSeleccionados.isEmpty() || estadosSeleccionados.contains(fuente.getEstado());
+            boolean categoriaCoincide = categoriasSeleccionadas.isEmpty() || categoriasSeleccionadas.contains("MASCOTAS") || categoriasSeleccionadas.contains("PERSONAS");
+
+            if (estadoCoincide && categoriaCoincide) {
+                addMarker(fuente, fuente.getEstado());
+                boundsBuilder.include(new LatLng(fuente.getLatitud(), fuente.getLongitud()));
+                found = true;
+            }
+        }
+
+        if (found) {
+            Map.animateCamera(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 100));
+        } else {
+            Toast.makeText(MainActivity.this, "No se encontraron fuentes con estos filtros", Toast.LENGTH_SHORT).show();
+        }
     }
 
     @Override
