@@ -25,4 +25,20 @@
         android:layout_marginBottom="-20dp"
         android:backgroundTint="@color/azulito" />
 
+    <androidx.appcompat.widget.SearchView
+        android:id="@+id/busqueda"
+        style="@style/barrabusqueda"
+        app:queryHint="Busqueda aqui"/>
+
+    <ListView
+        android:id="@+id/lista"
+        android:layout_width="370dp"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/busqueda"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentEnd="true"
+        android:layout_marginStart="21dp"
+        android:layout_marginEnd="21dp"
+        android:background="@color/white"
+        android:visibility="gone"/>
 </RelativeLayout>

@@ -3,6 +3,7 @@ package com.brunov.proyectointegrador;
 import android.content.pm.PackageManager;
 import android.graphics.PorterDuff;
 import android.graphics.drawable.Drawable;
+import android.graphics.Color;
 import android.health.connect.datatypes.ExerciseRoute;
 import android.location.Location;
 import android.os.Bundle;
@@ -17,6 +18,9 @@ import androidx.core.graphics.drawable.DrawableCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.appcompat.widget.SearchView;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.brunov.proyectointegrador.api.ApiClient;
 import com.brunov.proyectointegrador.api.ApiService;
@@ -29,6 +33,7 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
@@ -42,16 +47,29 @@ import android.util.Log;
 import android.view.GestureDetector;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.view.ViewGroup;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.ArrayAdapter;
+import android.widget.EditText;
+import android.widget.ListView;
+//import android.widget.SearchView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -62,6 +80,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
     private static final int RADIUS_METERS = 500; // Radio en metros (500 m)
     private FusedLocationProviderClient fusedLocationProviderClient;
+    private ListView listView;
+    private ArrayAdapter<String> adapter;
+    private List<String> lista;
+    private Set<String> barriosUnicos;
+
     private LocationCallback locationCallback;
     private HashMap<String, Marker> currentMarkers = new HashMap<>();
     private LinearLayout linearLayoutItems;
@@ -76,6 +99,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
+        //Configuracion y funcionalidad de la barra de busqueda
+        barrabusqueda();
         //Configuracion del BottomSheet
         botonsheet=findViewById(R.id.botonsheet);
         View vista = LayoutInflater.from(getApplicationContext()).inflate(R.layout.bottom_sheet_dialog, null);
@@ -87,11 +112,103 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
+
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
+    }
+
+    private void barrabusqueda(){
+        listView=findViewById(R.id.lista);
+        lista=new ArrayList<>();
+        barriosUnicos=new HashSet<>();
+
+        SearchView searchView = findViewById(R.id.busqueda);
+        EditText searchEditText = searchView.findViewById(androidx.appcompat.R.id.search_src_text);
+        searchEditText.setTextColor(Color.BLACK); // Color del texto
+        searchEditText.setHintTextColor(Color.GRAY); // Color del hint
+
+        searchView.setOnClickListener(v -> {
+            barriosUnicos.clear(); // Limpiar el Set de barrios únicos
+            lista.clear();
+
+            searchView.setIconified(false);
+            listView.setVisibility(View.VISIBLE);
+
+            ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
+            apiService.getFuentes().enqueue(new Callback<List<Fuentes>>() {
+                @Override
+                public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
+                    List<Fuentes>fuente=response.body();
+                    for(Fuentes fuentes:fuente){
+                        barriosUnicos.add(fuentes.getBarrio());
+                    }
+                    for(String barrios:barriosUnicos){
+                        lista.add(barrios);
+                    }
+                    adapter = new ArrayAdapter<String>(MainActivity.this, android.R.layout.simple_list_item_1, lista) {
+                        @Override
+                        public View getView(int position, View convertView, ViewGroup parent) {
+                            View view = super.getView(position, convertView, parent);
+                            TextView textView = (TextView) view.findViewById(android.R.id.text1);
+                            textView.setTextColor(Color.BLACK); // Cambia el color del texto
+                            return view;
+                        }
+                    };
+                    listView.setAdapter(adapter);
+                    searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+                        @Override
+                        public boolean onQueryTextSubmit(String query) {
+                            Map.clear();
+                            // Acción cuando el usuario envía la búsqueda
+                            for(Fuentes fuentes:fuente){
+                                if (query != null && query.equalsIgnoreCase(fuentes.getBarrio())) {
+                                    LatLng latLng = new LatLng(fuentes.getLatitud(), fuentes.getLongitud());
+                                    Map.addMarker(new MarkerOptions()
+                                            .position(latLng)
+                                            .title(fuentes.getNomVia())
+                                            .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
+                                }
+                            }
+                            // Ocultar el teclado
+                            hideKeyboard(v);
+                            return true;
+                        }
+
+                        @Override
+                        public boolean onQueryTextChange(String newText) {
+                            // Acción mientras el usuario escribe
+                            adapter.getFilter().filter(newText);
+                            if (newText.isEmpty()) {
+                                listView.setVisibility(View.GONE);
+                            }else {
+                                listView.setVisibility(View.VISIBLE);
+                            }
+                            return false;
+                        }
+                    });
+                    listView.setOnItemClickListener((parent, view, position, id) -> {
+                        String selectedItem = adapter.getItem(position);
+                        searchView.setQuery(selectedItem, false); // Mostrar selección en SearchView
+                        // Ocultar el ListView
+                        listView.setVisibility(View.GONE);
+                    });
+                }
+                @Override
+                public void onFailure(Call<List<Fuentes>> call, Throwable t) {
+                    t.printStackTrace(); // Manejo de errores
+                }
+            });
+        });
+    }
+
+    private void hideKeyboard(View view) {
+        InputMethodManager inputMethodManager = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+        if (inputMethodManager != null) {
+            inputMethodManager.hideSoftInputFromWindow(view.getWindowToken(), 0);
+        }
     }
 
     public void bottomSheet(BottomSheetDialog dialog,View vista){
@@ -138,7 +255,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 new LatLng(40.6437,-3.5702)
         );
         Map.setLatLngBoundsForCameraTarget(mapBounds);
-        Map.setMinZoomPreference(10);
+        Map.setMinZoomPreference(7);
         Map.setMaxZoomPreference(17);
         // Solicitar permisos
         requestLocationPermission();
