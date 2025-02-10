@@ -361,6 +361,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         Map.setLatLngBoundsForCameraTarget(mapBounds);
         Map.setMinZoomPreference(10);
         Map.setMaxZoomPreference(17);
+
+        // Deshabilitar el botón de ubicación del usuario
+        Map.getUiSettings().setMyLocationButtonEnabled(false);
+
         // Solicitar permisos
         requestLocationPermission();
 
