@@ -93,10 +93,13 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         Button available = findViewById(R.id.available);
         Button maintenance = findViewById(R.id.maintenance);
         Button disabled = findViewById(R.id.disabled);
+        Button center = findViewById(R.id.center);
 
 
 
         // Button click listeners
+        center.setOnClickListener(view -> {getDeviceLocation();});
+
         pet.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
