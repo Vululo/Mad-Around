@@ -101,6 +101,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         //Configuracion y funcionalidad de la barra de busqueda
         barrabusqueda();
+
         //Configuracion del BottomSheet
         botonsheet=findViewById(R.id.botonsheet);
         View vista = LayoutInflater.from(getApplicationContext()).inflate(R.layout.bottom_sheet_dialog, null);
@@ -162,6 +163,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         @Override
                         public boolean onQueryTextSubmit(String query) {
                             Map.clear();
+                            VaciarItems();
+
+                            fusedLocationProviderClient.removeLocationUpdates(locationCallback);
+
                             // Acción cuando el usuario envía la búsqueda
                             for(Fuentes fuentes:fuente){
                                 if (query != null && query.equalsIgnoreCase(fuentes.getBarrio())) {
@@ -170,6 +175,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                                             .position(latLng)
                                             .title(fuentes.getNomVia())
                                             .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
+                                    InsertarItem(fuentes);
                                 }
                             }
                             // Ocultar el teclado
@@ -183,6 +189,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                             adapter.getFilter().filter(newText);
                             if (newText.isEmpty()) {
                                 listView.setVisibility(View.GONE);
+                                configureLocationUpdates();
                             }else {
                                 listView.setVisibility(View.VISIBLE);
                             }
