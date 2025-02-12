@@ -308,6 +308,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void actualizarMarcadoresBusqueda() {
+
+        searchMarkers.clear();
+        barriosUnicos.clear();
+        fuentesBusqueda.clear();
+        lista.clear();
         Map.clear(); // Limpiar el mapa
         HashMap<String, Marker> updatedMarkers = new HashMap<>();
         LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder();
@@ -335,9 +340,15 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
 
         searchMarkers = updatedMarkers;
+
     }
 
     private void actualizarMarcadoresUbicacion() {
+
+        searchMarkers.clear();
+        barriosUnicos.clear();
+        fuentesBusqueda.clear();
+        lista.clear();
         Map.clear(); // Limpiar el mapa
         HashMap<String, Marker> updatedMarkers = new HashMap<>();
         LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder();
@@ -392,6 +403,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void actualizarMarcadores(List<Fuentes> fuentesCercanas) {
+        searchMarkers.clear();
+        barriosUnicos.clear();
+        fuentesBusqueda.clear();
+        currentMarkers.clear();
+        lista.clear();
         HashMap<String, Marker> updatedMarkers = new HashMap<>();
 
         for (Fuentes fuente : fuentesCercanas) {
