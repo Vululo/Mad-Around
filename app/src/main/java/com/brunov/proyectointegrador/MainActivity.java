@@ -64,7 +64,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
     private static final int RADIUS_METERS = 500; // Radio en metros (500 m)
     private FusedLocationProviderClient fusedLocationProviderClient;
-    private boolean petClick,peopleClick,maintenaceClick,disabledClick,operativeClick = false;
 
     private HashMap<String, Marker> currentMarkers = new HashMap<>();
     private HashMap<String,Marker> searchMarkers = new HashMap<>();
@@ -72,11 +71,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private ArrayAdapter<String> adapter;
     private List<String> lista;
     private Set<String> barriosUnicos;
-    private Set<String> estadosSeleccionados = new HashSet<>();
-    private Set<String> categoriasSeleccionadas = new HashSet<>();
-    private List<Fuentes> fuentesBusqueda; // Almacena las fuentes del último barrio buscado
-
-
+    private final Set<String> estadosSeleccionados = new HashSet<>();
+    private final Set<String> categoriasSeleccionadas = new HashSet<>();
+    private List<Fuentes> fuentesBusqueda;
+    private List<Fuentes> fuentesCercanas;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -151,7 +149,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             estadosSeleccionados.add(estado);
             button.setBackground(getDrawable(activeDrawable));
         }
-        actualizarMarcadoresFiltrados();
+        actualizarMarcadoresBusqueda();
     }
 
     // Método para manejar las categorías (Mascotas y Personas)
@@ -163,7 +161,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             categoriasSeleccionadas.add(categoria);
             button.setBackground(getDrawable(activeDrawable));
         }
-        actualizarMarcadoresFiltrados();
+        actualizarMarcadoresBusqueda();
     }
 
 
@@ -186,9 +184,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
         });
         searchView.setOnClickListener(v -> {
-            barriosUnicos.clear(); // Limpiar el Set de barrios únicos
-            lista.clear();
+            searchMarkers.clear();
+            barriosUnicos.clear();
             fuentesBusqueda.clear();
+            currentMarkers.clear();
+            lista.clear();
             searchView.setIconified(false);
             listView.setVisibility(View.VISIBLE);
 
@@ -307,23 +307,24 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         });
     }
 
-    // Método para actualizar los marcadores filtrados
-    private void actualizarMarcadoresFiltrados() {
-        Map.clear(); // Limpiar los marcadores actuales
-
+    private void actualizarMarcadoresBusqueda() {
+        Map.clear(); // Limpiar el mapa
+        HashMap<String, Marker> updatedMarkers = new HashMap<>();
         LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder();
         boolean found = false;
-
+        if (!searchMarkers.isEmpty()) {
+            actualizarMarcadoresBusqueda();
+        } else {
+            actualizarMarcadoresUbicacion();
+        }
         for (Fuentes fuente : fuentesBusqueda) {
-            boolean estadoCoincide = estadosSeleccionados.isEmpty() || estadosSeleccionados.contains(fuente.getEstado());
-            boolean categoriaCoincide = categoriasSeleccionadas.isEmpty() ||
-                    (fuente.getUso().equals("MASCOTAS") && categoriasSeleccionadas.contains("MASCOTAS")) ||
-                    (fuente.getUso().equals("PERSONAS") && categoriasSeleccionadas.contains("PERSONAS")) ||(fuente.getUso().contains("PERSONAS_Y_MASCOTAS"));
-
-            if (estadoCoincide && categoriaCoincide) {
-                addMarker(fuente, fuente.getEstado());
-                boundsBuilder.include(new LatLng(fuente.getLatitud(), fuente.getLongitud()));
-                found = true;
+            if (cumpleFiltros(fuente)) {
+                Marker marker = addMarker(fuente, fuente.getEstado());
+                if (marker != null) {
+                    updatedMarkers.put(fuente.getNomVia(), marker);
+                    boundsBuilder.include(new LatLng(fuente.getLatitud(), fuente.getLongitud()));
+                    found = true;
+                }
             }
         }
 
@@ -332,7 +333,47 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         } else {
             Toast.makeText(MainActivity.this, "No se encontraron fuentes con estos filtros", Toast.LENGTH_SHORT).show();
         }
+
+        searchMarkers = updatedMarkers;
     }
+
+    private void actualizarMarcadoresUbicacion() {
+        Map.clear(); // Limpiar el mapa
+        HashMap<String, Marker> updatedMarkers = new HashMap<>();
+        LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder();
+        boolean found = false;
+
+        for (Fuentes fuente : fuentesCercanas) {
+            if (cumpleFiltros(fuente)) {
+                Marker marker = addMarker(fuente, fuente.getEstado());
+                if (marker != null) {
+                    updatedMarkers.put(fuente.getNomVia(), marker);
+                    boundsBuilder.include(new LatLng(fuente.getLatitud(), fuente.getLongitud()));
+                    found = true;
+                }
+            }
+        }
+
+        if (found) {
+            Map.animateCamera(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 100));
+        } else {
+            Toast.makeText(MainActivity.this, "No se encontraron fuentes con estos filtros", Toast.LENGTH_SHORT).show();
+        }
+
+        currentMarkers = updatedMarkers;
+    }
+
+
+
+    private boolean cumpleFiltros(Fuentes fuente) {
+        boolean estadoCoincide = estadosSeleccionados.isEmpty() || estadosSeleccionados.contains(fuente.getEstado());
+        boolean categoriaCoincide = categoriasSeleccionadas.isEmpty() ||
+                (fuente.getUso().equals("MASCOTAS") && categoriasSeleccionadas.contains("MASCOTAS")) ||
+                (fuente.getUso().equals("PERSONAS") && categoriasSeleccionadas.contains("PERSONAS")) ||(fuente.getUso().contains("PERSONAS_Y_MASCOTAS"));
+
+        return estadoCoincide && categoriaCoincide;
+    }
+
 
     @Override
     public void onMapReady(@NonNull GoogleMap googleMap) {
@@ -350,9 +391,13 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         configureLocationUpdates();
     }
 
-
-
     private void actualizarMarcadores(List<Fuentes> fuentesCercanas) {
+        searchMarkers.clear();
+        barriosUnicos.clear();
+        fuentesBusqueda.clear();
+        currentMarkers.clear();
+        lista.clear();
+
         HashMap<String, Marker> updatedMarkers = new HashMap<>();
 
         for (Fuentes fuente : fuentesCercanas) {
@@ -406,7 +451,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     // Método para filtrar fuentes cercanas
     private List<Fuentes> filtrarFuentesCercanas(List<Fuentes> fuentes, Location userLocation) {
-        List<Fuentes> fuentesCercanas = new ArrayList<>();
+        fuentesCercanas = new ArrayList<>();
         for (Fuentes fuente : fuentes) {
             Location fuenteLocation = new Location("");
             fuenteLocation.setLatitude(fuente.getLatitud());
