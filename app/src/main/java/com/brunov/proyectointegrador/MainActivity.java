@@ -25,6 +25,7 @@ import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.Priority;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -50,10 +51,13 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.json.JSONArray;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 import retrofit2.Call;
@@ -77,6 +81,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private List<Fuentes> fuentesCercanas = new ArrayList<>();
 
     boolean isSearching=false;
+
 
 
     @Override
@@ -162,7 +167,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 }
                 break;
         }
-        actualizarMarcadoresBusqueda();
+        if(isSearching){
+            actualizarMarcadoresBusqueda();
+        }else{
+            actualizarMarcadoresLocalizacion();
+        }
+
     }
 
     private void BarraDeBusqueda() {
@@ -181,6 +191,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
         });
         searchView.setOnClickListener(v -> {
+            Log.e("CurrentMarkerClear","Limpiado de marcadores del Buscador");
+
             isSearching=true;
             barriosUnicos.clear();
             fuentesBusqueda.clear();
@@ -227,6 +239,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                             adapter.getFilter().filter(newText);
                             if (newText.isEmpty()) {
+                                Log.e("CurrentMarkerClear","Limpiado de marcadores salir Buscador");
+
                                 isSearching=false;
                                 listView.setVisibility(View.GONE);
                                 Map.clear();
@@ -288,32 +302,36 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void actualizarMarcadoresBusqueda() {
+        Log.e("CurrentMarkerClear","Limpiado de marcadores Buscados");
         currentMarkers.clear();
         Map.clear();
-        currentMarkers = listaDeFuentes(fuentesBusqueda,true);
+        currentMarkers = listaDeFuentes(fuentesBusqueda);
     }
 
-    private HashMap<String, Marker> listaDeFuentes(List<Fuentes> fuente,boolean filtro){
+    private void actualizarMarcadoresLocalizacion(){
+        Log.e("CurrentMarkerClear","Limpiado de marcadores Cercanos");
+        currentMarkers.clear();
+        Map.clear();
+        currentMarkers = listaDeFuentes(fuentesCercanas);
+    }
+
+    private HashMap<String, Marker> listaDeFuentes(List<Fuentes> fuente){
+        Log.e("NewMarcadores","Nueva Lista de Marcadores");
         HashMap<String, Marker> markers = new HashMap<>();
         LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder();
-        boolean found=false;
+
         for (Fuentes fuentes : fuente){
+
             String key = fuentes.getLongitud()+" "+fuentes.getLatitud();
-            if(filtro){
-                if(cumpleFiltros(fuentes)){
-                    markers.put(key,addMarker(fuentes,fuentes.getEstado()));
-                }
-            }else{
+
+            if(cumpleFiltros(fuentes)){
                 markers.put(key,addMarker(fuentes,fuentes.getEstado()));
             }
             boundsBuilder.include(new LatLng(fuentes.getLatitud(), fuentes.getLongitud()));
-            found=true;
         }
-        if(found){
-            Map.animateCamera(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 100));
-        }else{
-            Log.e("ERRORBOUNDS", "BoundBuilderError " );
-        }
+
+        Map.animateCamera(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 100));
+
         return markers;
     }
 
@@ -332,27 +350,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         return estadoCoincide && categoriaCoincide;
     }
-
-
-
-
-    // Método para filtrar fuentes cercanas
-    private List<Fuentes> filtrarFuentesCercanas(List<Fuentes> fuentes, Location userLocation) {
-        for (Fuentes fuente : fuentes) {
-            Location fuenteLocation = new Location("");
-            fuenteLocation.setLatitude(fuente.getLatitud());
-            fuenteLocation.setLongitude(fuente.getLongitud());
-
-            // Calcula la distancia entre el usuario y la fuente
-            float distancia = userLocation.distanceTo(fuenteLocation);
-            if (distancia <= RADIUS_METERS) { // Radio de 2 km
-                fuentesCercanas.add(fuente);
-            }
-        }
-        return fuentesCercanas;
-    }
-
-
 
     @Override
     public void onMapReady(@NonNull GoogleMap googleMap) {
@@ -480,10 +477,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void configureLocationUpdates() {
-        LocationRequest locationRequest = LocationRequest.create()
-                .setInterval(10000) // Cada 10 segundos
-                .setFastestInterval(5000) // Intervalo más rápido posible
-                .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+
+        LocationRequest locationRequest = new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY,10000)
+                .build();
 
         LocationCallback locationCallback = new LocationCallback() {
             @Override
@@ -498,6 +494,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallback, getMainLooper());
         }
+
     }
 
     private void updateMapWithUserLocation(Location userLocation) {
@@ -507,8 +504,22 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             @Override
             public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    List<Fuentes> fuentesCercanas = filtrarFuentesCercanas(response.body(), userLocation);
-                    currentMarkers = listaDeFuentes(fuentesCercanas,true);
+                    List<Fuentes> fuentes = response.body();
+                    for (Fuentes fuente : fuentes) {
+                        Location fuenteLocation = new Location("");
+                        fuenteLocation.setLatitude(fuente.getLatitud());
+                        fuenteLocation.setLongitude(fuente.getLongitud());
+                        String key = fuente.getLongitud()+" "+fuente.getLatitud();
+                        // Calcula la distancia entre el usuario y la fuente
+                        float distancia = userLocation.distanceTo(fuenteLocation);
+                        if (distancia <= RADIUS_METERS && cumpleFiltros(fuente)) {
+                            // Si ya existe el marcador, no lo agrega de nuevo
+                            if (!currentMarkers.containsKey(key)) {
+                                currentMarkers.put(key, addMarker(fuente, fuente.getEstado()));
+                            }
+                            fuentesCercanas.add(fuente);
+                        }
+                    }
                 }
             }
             @Override
@@ -519,3 +530,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
 }
+
+
+
+
+
+
+
