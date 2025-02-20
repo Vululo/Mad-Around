@@ -164,7 +164,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         @Override
                         public boolean onQueryTextSubmit(String query) {
                             Map.clear();
-                            VaciarItems();
 
                             LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder();
                             found =false;
@@ -177,7 +176,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                                             .position(latLng)
                                             .title(fuentes.getNomVia())
                                             .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
-                                    InsertarItem(fuentes);
                                     boundsBuilder.include(latLng);
                                     buscando=true;
                                     found=true;
@@ -217,6 +215,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                         // Limpiar los marcadores actuales
                         Map.clear();
+                        VaciarItems();
 
                         LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder(); // Para ajustar la cámara
 
@@ -230,6 +229,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                                         .position(latLng)
                                         .title(fuentes.getNomVia())
                                         .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
+                                InsertarItem(fuentes);
                                 boundsBuilder.include(latLng);
                                 found=true;
                                 buscando=true;
