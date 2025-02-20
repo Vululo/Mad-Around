@@ -91,6 +91,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private Button botonsheet;
     private GestureDetector gestureDetector;
     BottomSheetDialog dialog;
+    private boolean buscando,found=false;
 
 
     @Override
@@ -134,7 +135,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         searchView.setOnClickListener(v -> {
             barriosUnicos.clear(); // Limpiar el Set de barrios únicos
             lista.clear();
-
+            currentMarkers.clear();
             searchView.setIconified(false);
             listView.setVisibility(View.VISIBLE);
 
@@ -165,7 +166,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                             Map.clear();
                             VaciarItems();
 
-                            fusedLocationProviderClient.removeLocationUpdates(locationCallback);
+                            LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder();
+                            found =false;
 
                             // Acción cuando el usuario envía la búsqueda
                             for(Fuentes fuentes:fuente){
@@ -176,11 +178,20 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                                             .title(fuentes.getNomVia())
                                             .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
                                     InsertarItem(fuentes);
+                                    boundsBuilder.include(latLng);
+                                    buscando=true;
+                                    found=true;
                                 }
+                            }
+                            if (found) {
+                                // Ajustar la cámara para que muestre todos los marcadores
+                                Map.animateCamera(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 100));
+                            } else {
+                                Toast.makeText(MainActivity.this, "No se encontraron fuentes en esta zona", Toast.LENGTH_SHORT).show();
                             }
                             // Ocultar el teclado
                             hideKeyboard(v);
-                            return true;
+                            return found;
                         }
 
                         @Override
@@ -189,7 +200,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                             adapter.getFilter().filter(newText);
                             if (newText.isEmpty()) {
                                 listView.setVisibility(View.GONE);
-                                configureLocationUpdates();
+                                Map.clear();
+                                currentMarkers.clear();
+                                buscando=false;
                             }else {
                                 listView.setVisibility(View.VISIBLE);
                             }
@@ -197,9 +210,41 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         }
                     });
                     listView.setOnItemClickListener((parent, view, position, id) -> {
-                        String selectedItem = adapter.getItem(position);
-                        searchView.setQuery(selectedItem, false); // Mostrar selección en SearchView
                         // Ocultar el ListView
+                        listView.setVisibility(View.GONE);
+                        String selectedItem = adapter.getItem(position); // Barrio seleccionado
+                        searchView.setQuery(selectedItem, false); // Mostrar en SearchView
+
+                        // Limpiar los marcadores actuales
+                        Map.clear();
+
+                        LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder(); // Para ajustar la cámara
+
+                        boolean found = false; // Para saber si se encontraron fuentes en el barrio
+
+                        // Agregar todos los marcadores del barrio seleccionado
+                        for (Fuentes fuentes : fuente) {
+                            if (selectedItem.equalsIgnoreCase(fuentes.getBarrio())) {
+                                LatLng latLng = new LatLng(fuentes.getLatitud(), fuentes.getLongitud());
+                                Map.addMarker(new MarkerOptions()
+                                        .position(latLng)
+                                        .title(fuentes.getNomVia())
+                                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
+                                boundsBuilder.include(latLng);
+                                found=true;
+                                buscando=true;
+                            }
+                        }
+
+                        if (found) {
+                            // Ajustar la cámara para que muestre todos los marcadores
+                            Map.animateCamera(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 100));
+                        } else {
+                            Toast.makeText(MainActivity.this, "No se encontraron fuentes en esta zona", Toast.LENGTH_SHORT).show();
+                        }
+
+                        hideKeyboard(searchView);
+                        // Ocultar el ListView después de la selección
                         listView.setVisibility(View.GONE);
                     });
                 }
@@ -216,6 +261,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         if (inputMethodManager != null) {
             inputMethodManager.hideSoftInputFromWindow(view.getWindowToken(), 0);
         }
+        view.clearFocus();
     }
 
     public void bottomSheet(BottomSheetDialog dialog,View vista){
@@ -297,7 +343,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     List<Fuentes> fuentesCercanas = filtrarFuentesCercanas(response.body(), userLocation);
-                    actualizarMarcadores(fuentesCercanas);
+                    Log.d("DEBUG","buscando "+buscando);
+                    if(!buscando) {
+                        actualizarMarcadores(fuentesCercanas);
+                    }
                 }
             }
 
@@ -352,6 +401,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 LinearLayout.LayoutParams.WRAP_CONTENT
         );
 
+        newItemContainer.setFocusable(false);
+        newItemContainer.setFocusableInTouchMode(false);
+
         layoutParams.setMargins(0,0,0,15);
         newItemContainer.setLayoutParams(layoutParams);
 
@@ -397,6 +449,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             LatLng location = new LatLng(fuente.getLatitud(),fuente.getLongitud());
             Map.moveCamera(CameraUpdateFactory.newLatLngZoom(location, 80));
             dialog.dismiss();
+            hideKeyboard(v);
         });
 
         // Añadir el contenedor al LinearLayout principal
