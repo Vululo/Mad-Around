@@ -25,6 +25,7 @@ import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.Priority;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -38,6 +39,7 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.Task;
 
 import android.Manifest;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.view.ViewGroup;
@@ -49,10 +51,13 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.json.JSONArray;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 import retrofit2.Call;
@@ -66,14 +71,16 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private FusedLocationProviderClient fusedLocationProviderClient;
 
     private HashMap<String, Marker> currentMarkers = new HashMap<>();
-    private HashMap<String,Marker> searchMarkers = new HashMap<>();
 
     private ArrayAdapter<String> adapter;
-    private List<String> lista;
-    private Set<String> barriosUnicos;
-    private Set<String> estadosSeleccionados = new HashSet<>();
-    private Set<String> categoriasSeleccionadas = new HashSet<>();
-    private List<Fuentes> fuentesBusqueda; // Almacena las fuentes del último barrio buscado
+    private List<String> lista = new ArrayList<>();
+    private Set<String> barriosUnicos = new HashSet<>();
+    private final Set<String> estadosSeleccionados = new HashSet<>();
+    private final Set<String> categoriasSeleccionadas = new HashSet<>();
+    private List<Fuentes> fuentesBusqueda = new ArrayList<>();
+    private List<Fuentes> fuentesCercanas = new ArrayList<>();
+
+    boolean isSearching=false;
 
 
 
@@ -95,44 +102,41 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         Button disabled = findViewById(R.id.disabled);
         Button center = findViewById(R.id.center);
 
-
-
         // Button click listeners
         center.setOnClickListener(view -> {getDeviceLocation();});
 
         pet.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                toggleCategoria("MASCOTAS", pet, R.drawable.paw2, R.drawable.paw1);
+                toggleFiltro("MASCOTAS", pet, R.drawable.paw2, R.drawable.paw1,"Categoria");
             }
         });
 
         people.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                toggleCategoria("PERSONAS", people, R.drawable.people2, R.drawable.people1);
+                toggleFiltro("PERSONAS", people, R.drawable.people2, R.drawable.people1,"Categoria");
             }
         });
 
         available.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                toggleEstado("OPERATIVO", available, R.drawable.enabled2, R.drawable.enabled1);
+                toggleFiltro("OPERATIVO", available, R.drawable.enabled2, R.drawable.enabled1,"Estado");
             }
         });
         maintenance.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                toggleEstado("CERRADA_TEMPORALMENT", maintenance, R.drawable.maintenance2, R.drawable.maintenance1);
+                toggleFiltro("CERRADA_TEMPORALMENT", maintenance, R.drawable.maintenance2, R.drawable.maintenance1,"Estado");
             }
         });
         disabled.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                toggleEstado("FUERA_DE_SERVICIO", disabled, R.drawable.disabled2, R.drawable.disabled1);
+                toggleFiltro("FUERA_DE_SERVICIO", disabled, R.drawable.disabled2, R.drawable.disabled1,"Estado");
             }
         });
-
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
@@ -142,35 +146,37 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     // Método para manejar los estados de las fuentes
-    private void toggleEstado(String estado, Button button, int activeDrawable, int inactiveDrawable) {
-        if (estadosSeleccionados.contains(estado)) {
-            estadosSeleccionados.remove(estado);
-            button.setBackground(getDrawable(inactiveDrawable));
-        } else {
-            estadosSeleccionados.add(estado);
-            button.setBackground(getDrawable(activeDrawable));
+    private void toggleFiltro(String filtro, Button button, int activeDrawable, int inactiveDrawable,String tipo) {
+        switch(tipo){
+            case "Estado":
+                if (estadosSeleccionados.contains(filtro)) {
+                    estadosSeleccionados.remove(filtro);
+                    button.setBackground(getDrawable(inactiveDrawable));
+                } else {
+                    estadosSeleccionados.add(filtro);
+                    button.setBackground(getDrawable(activeDrawable));
+                }
+                break;
+            case "Categoria":
+                if (categoriasSeleccionadas.contains(filtro)) {
+                    categoriasSeleccionadas.remove(filtro);
+                    button.setBackground(getDrawable(inactiveDrawable));
+                } else {
+                    categoriasSeleccionadas.add(filtro);
+                    button.setBackground(getDrawable(activeDrawable));
+                }
+                break;
         }
-        actualizarMarcadoresFiltrados();
-    }
-
-    // Método para manejar las categorías (Mascotas y Personas)
-    private void toggleCategoria(String categoria, Button button, int activeDrawable, int inactiveDrawable) {
-        if (categoriasSeleccionadas.contains(categoria)) {
-            categoriasSeleccionadas.remove(categoria);
-            button.setBackground(getDrawable(inactiveDrawable));
-        } else {
-            categoriasSeleccionadas.add(categoria);
-            button.setBackground(getDrawable(activeDrawable));
+        if(isSearching){
+            actualizarMarcadoresBusqueda();
+        }else{
+            actualizarMarcadoresLocalizacion();
         }
-        actualizarMarcadoresFiltrados();
-    }
 
+    }
 
     private void BarraDeBusqueda() {
         ListView listView=findViewById(R.id.lista);
-        lista=new ArrayList<>();
-        barriosUnicos=new HashSet<>();
-        fuentesBusqueda = new ArrayList<>();
 
         SearchView searchView = findViewById(R.id.busqueda);
         EditText searchEditText = searchView.findViewById(androidx.appcompat.R.id.search_src_text);
@@ -185,9 +191,13 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
         });
         searchView.setOnClickListener(v -> {
-            barriosUnicos.clear(); // Limpiar el Set de barrios únicos
-            lista.clear();
+            Log.e("CurrentMarkerClear","Limpiado de marcadores del Buscador");
+
+            isSearching=true;
+            barriosUnicos.clear();
             fuentesBusqueda.clear();
+            currentMarkers.clear();
+            lista.clear();
             searchView.setIconified(false);
             listView.setVisibility(View.VISIBLE);
 
@@ -215,44 +225,27 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
                         @Override
                         public boolean onQueryTextSubmit(String query) {
+
                             Map.clear();
-
-                            LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder(); // Para ajustar la cámara
-
-                            boolean found = false; // Para saber si se encontraron fuentes en el barrio
-
-                            // Agregar todos los marcadores del barrio seleccionado
-                            for (Fuentes fuentes : fuente) {
-                                if (query != null && query.equalsIgnoreCase(fuentes.getBarrio())) {
-                                    LatLng latLng = new LatLng(fuentes.getLatitud(), fuentes.getLongitud());
-                                    fuentesBusqueda.add(fuentes);
-                                    String estado = fuentes.getEstado();
-                                    searchMarkers.put(fuentes.getNomVia(), addMarker(fuentes,estado));
-                                    boundsBuilder.include(latLng);
-                                    found = true;
-                                }
-                            }
-
-                            if (found) {
-                                // Ajustar la cámara para que muestre todos los marcadores
-                                Map.animateCamera(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 100));
-                            } else {
-                                Toast.makeText(MainActivity.this, "No se encontraron fuentes en esta zona", Toast.LENGTH_SHORT).show();
-                            }
+                            fuentesDelMapa(fuente, query);
 
                             hideKeyboard(searchView);
                             // Ocultar el ListView después de la selección
                             listView.setVisibility(View.GONE);
-                            return found;
+                            return true;
                         }
 
                         @Override
                         public boolean onQueryTextChange(String newText) {
-                            adapter.getFilter().filter(newText);
 
+                            adapter.getFilter().filter(newText);
                             if (newText.isEmpty()) {
+                                Log.e("CurrentMarkerClear","Limpiado de marcadores salir Buscador");
+
+                                isSearching=false;
                                 listView.setVisibility(View.GONE);
-                                Map.clear(); // Borrar los marcadores de la búsqueda
+                                Map.clear();
+                                fuentesBusqueda.clear();
                                 currentMarkers.clear();
                                 configureLocationUpdates();
                                 getDeviceLocation();
@@ -269,32 +262,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                         // Limpiar los marcadores actuales
                         Map.clear();
-
-                        LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder(); // Para ajustar la cámara
-
-                        boolean found = false; // Para saber si se encontraron fuentes en el barrio
-
-                        // Agregar todos los marcadores del barrio seleccionado
-                        for (Fuentes fuentes : fuente) {
-                            if (selectedItem.equalsIgnoreCase(fuentes.getBarrio())) {
-                                LatLng latLng = new LatLng(fuentes.getLatitud(), fuentes.getLongitud());
-                                String estado = fuentes.getEstado();
-                                fuentesBusqueda.add(fuentes);
-                                searchMarkers.put(fuentes.getNomVia(), addMarker(fuentes,estado));
-                                boundsBuilder.include(latLng);
-                                found = true;
-                            }
-                        }
-
-                        if (found) {
-                            // Ajustar la cámara para que muestre todos los marcadores
-                            Map.animateCamera(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 100));
-                        } else {
-                            Toast.makeText(MainActivity.this, "No se encontraron fuentes en esta zona", Toast.LENGTH_SHORT).show();
-                        }
+                        fuentesDelMapa(fuente, selectedItem);
 
                         hideKeyboard(searchView);
-                        // Ocultar el ListView después de la selección
                         listView.setVisibility(View.GONE);
                     });
                 }
@@ -306,31 +276,75 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         });
     }
 
-    // Método para actualizar los marcadores filtrados
-    private void actualizarMarcadoresFiltrados() {
-        Map.clear(); // Limpiar los marcadores actuales
+    private void fuentesDelMapa(List<Fuentes> fuente, String selectedItem) {
+        LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder(); // Para ajustar la cámara
 
-        LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder();
-        boolean found = false;
+        boolean found = false; // Para saber si se encontraron fuentes en el barrio
 
-        for (Fuentes fuente : fuentesBusqueda) {
-            boolean estadoCoincide = estadosSeleccionados.isEmpty() || estadosSeleccionados.contains(fuente.getEstado());
-            boolean categoriaCoincide = categoriasSeleccionadas.isEmpty() ||
-                    (fuente.getUso().equals("MASCOTAS") && categoriasSeleccionadas.contains("MASCOTAS")) ||
-                    (fuente.getUso().equals("PERSONAS") && categoriasSeleccionadas.contains("PERSONAS")) ||(fuente.getUso().contains("PERSONAS_Y_MASCOTAS"));
-
-            if (estadoCoincide && categoriaCoincide) {
-                addMarker(fuente, fuente.getEstado());
-                boundsBuilder.include(new LatLng(fuente.getLatitud(), fuente.getLongitud()));
+        // Agregar todos los marcadores del barrio seleccionado
+        for (Fuentes fuentes : fuente) {
+            if (selectedItem.equalsIgnoreCase(fuentes.getBarrio())) {
+                LatLng latLng = new LatLng(fuentes.getLatitud(), fuentes.getLongitud());
+                String key = fuentes.getLatitud()+" "+fuentes.getLongitud();
+                fuentesBusqueda.add(fuentes);
+                currentMarkers.put(key, addMarker(fuentes,fuentes.getEstado()));
+                boundsBuilder.include(latLng);
                 found = true;
+
             }
         }
 
         if (found) {
+            // Ajustar la cámara para que muestre todos los marcadores
             Map.animateCamera(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 100));
         } else {
-            Toast.makeText(MainActivity.this, "No se encontraron fuentes con estos filtros", Toast.LENGTH_SHORT).show();
+            Toast.makeText(MainActivity.this, "No se encontraron fuentes en esta zona", Toast.LENGTH_SHORT).show();
         }
+    }
+
+    private void actualizarMarcadoresBusqueda() {
+        Log.e("CurrentMarkerClear","Limpiado de marcadores Buscados");
+        currentMarkers.clear();
+        Map.clear();
+        currentMarkers = listaDeFuentes(fuentesBusqueda);
+    }
+
+    private void actualizarMarcadoresLocalizacion(){
+        Log.e("CurrentMarkerClear","Limpiado de marcadores Cercanos");
+        currentMarkers.clear();
+        Map.clear();
+        currentMarkers = listaDeFuentes(fuentesCercanas);
+    }
+
+    private HashMap<String, Marker> listaDeFuentes(List<Fuentes> fuente){
+        Log.e("NewMarcadores","Nueva Lista de Marcadores");
+        HashMap<String, Marker> markers = new HashMap<>();
+        LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder();
+
+        for (Fuentes fuentes : fuente){
+
+            String key = fuentes.getLongitud()+" "+fuentes.getLatitud();
+
+            if(cumpleFiltros(fuentes)){
+                markers.put(key,addMarker(fuentes,fuentes.getEstado()));
+            }
+            boundsBuilder.include(new LatLng(fuentes.getLatitud(), fuentes.getLongitud()));
+        }
+
+        Map.animateCamera(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 100));
+
+        return markers;
+    }
+
+
+    private boolean cumpleFiltros(Fuentes fuente) {
+        boolean estadoCoincide = estadosSeleccionados.isEmpty() || estadosSeleccionados.contains(fuente.getEstado());
+        boolean categoriaCoincide = categoriasSeleccionadas.isEmpty() ||
+                (fuente.getUso().equals("MASCOTAS") && categoriasSeleccionadas.contains("MASCOTAS")) ||
+                (fuente.getUso().equals("PERSONAS") && categoriasSeleccionadas.contains("PERSONAS")) ||
+                (fuente.getUso().contains("PERSONAS_Y_MASCOTAS"));
+
+        return estadoCoincide && categoriaCoincide;
     }
 
     @Override
@@ -351,34 +365,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         requestLocationPermission();
 
         configureLocationUpdates();
-    }
-
-
-
-    private void actualizarMarcadores(List<Fuentes> fuentesCercanas) {
-        HashMap<String, Marker> updatedMarkers = new HashMap<>();
-
-        for (Fuentes fuente : fuentesCercanas) {
-            String key = fuente.getLatitud() + "," + fuente.getLongitud();
-
-            if (currentMarkers.containsKey(key)) {
-                // Mantener marcador existente
-                updatedMarkers.put(key, currentMarkers.get(key));
-            } else {
-                // Crear nuevo marcador
-                String estado = fuente.getEstado();
-                updatedMarkers.put(key, addMarker(fuente,estado));
-            }
-        }
-
-        // Eliminar marcadores que ya no están cerca
-        for (String key : currentMarkers.keySet()) {
-            if (!updatedMarkers.containsKey(key)) {
-                currentMarkers.get(key).remove();
-            }
-        }
-
-        currentMarkers = updatedMarkers; // Actualizar lista de marcadores
     }
 
     private Marker addMarker(Fuentes fuente,String estado){
@@ -406,27 +392,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
         return marker;
     }
-
-    // Método para filtrar fuentes cercanas
-    private List<Fuentes> filtrarFuentesCercanas(List<Fuentes> fuentes, Location userLocation) {
-        List<Fuentes> fuentesCercanas = new ArrayList<>();
-        for (Fuentes fuente : fuentes) {
-            Location fuenteLocation = new Location("");
-            fuenteLocation.setLatitude(fuente.getLatitud());
-            fuenteLocation.setLongitude(fuente.getLongitud());
-
-            // Calcula la distancia entre el usuario y la fuente
-            float distancia = userLocation.distanceTo(fuenteLocation);
-            if (distancia <= RADIUS_METERS) { // Radio de 2 km
-
-                fuentesCercanas.add(fuente);
-
-            }
-        }
-        return fuentesCercanas;
-    }
-
-
 
     private void getDeviceLocation(){
         try{
@@ -512,10 +477,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void configureLocationUpdates() {
-        LocationRequest locationRequest = LocationRequest.create()
-                .setInterval(10000) // Cada 10 segundos
-                .setFastestInterval(5000) // Intervalo más rápido posible
-                .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+
+        LocationRequest locationRequest = new LocationRequest
+                .Builder(Priority.PRIORITY_HIGH_ACCURACY,10000)
+                .build();
 
         LocationCallback locationCallback = new LocationCallback() {
             @Override
@@ -530,24 +495,38 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallback, getMainLooper());
         }
+
     }
 
     private void updateMapWithUserLocation(Location userLocation) {
+        if(isSearching) return;
         ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
         apiService.getFuentes().enqueue(new Callback<List<Fuentes>>() {
             @Override
             public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    List<Fuentes> fuentesCercanas = filtrarFuentesCercanas(response.body(), userLocation);
-                    actualizarMarcadores(fuentesCercanas);
+                    List<Fuentes> fuentes = response.body();
+                    for (Fuentes fuente : fuentes) {
+                        Location fuenteLocation = new Location("");
+                        fuenteLocation.setLatitude(fuente.getLatitud());
+                        fuenteLocation.setLongitude(fuente.getLongitud());
+                        String key = fuente.getLongitud()+" "+fuente.getLatitud();
+                        // Calcula la distancia entre el usuario y la fuente
+                        float distancia = userLocation.distanceTo(fuenteLocation);
+                        if (distancia <= RADIUS_METERS && cumpleFiltros(fuente)) {
+                            // Si ya existe el marcador, no lo agrega de nuevo
+                            if (!currentMarkers.containsKey(key)) {
+                                currentMarkers.put(key, addMarker(fuente, fuente.getEstado()));
+                            }
+                            fuentesCercanas.add(fuente);
+                        }
+                    }
                 }
             }
-
             @Override
             public void onFailure(Call<List<Fuentes>> call, Throwable t) {
                 t.printStackTrace(); // Manejo de errores
             }
         });
     }
-
 }
