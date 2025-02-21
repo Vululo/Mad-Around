@@ -230,6 +230,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                             fuentesDelMapa(fuente, query);
 
                             hideKeyboard(searchView);
+                            // Ocultar el ListView después de la selección
                             listView.setVisibility(View.GONE);
                             return true;
                         }
@@ -334,11 +335,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         return markers;
     }
-
-
-
-
-
 
 
     private boolean cumpleFiltros(Fuentes fuente) {
@@ -482,7 +478,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private void configureLocationUpdates() {
 
-        LocationRequest locationRequest = new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY,10000)
+        LocationRequest locationRequest = new LocationRequest
+                .Builder(Priority.PRIORITY_HIGH_ACCURACY,10000)
                 .build();
 
         LocationCallback locationCallback = new LocationCallback() {
@@ -532,12 +529,4 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
         });
     }
-
 }
-
-
-
-
-
-
-
