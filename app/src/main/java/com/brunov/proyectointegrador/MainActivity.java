@@ -14,6 +14,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
+import androidx.core.graphics.drawable.DrawableCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.appcompat.widget.SearchView;
@@ -37,15 +38,21 @@ import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.Task;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 
 import android.Manifest;
 import android.util.Log;
+import android.view.GestureDetector;
+import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 //import android.widget.SearchView;
 import android.widget.TextView;
@@ -82,6 +89,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     boolean isSearching=false;
 
+    private LinearLayout linearLayoutItems;
+    private Button botonsheet;
+    private GestureDetector gestureDetector;
+    BottomSheetDialog dialog;
+    private boolean buscando,found=false;
+
 
 
     @Override
@@ -91,6 +104,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         setContentView(R.layout.activity_main);
 
         BarraDeBusqueda();
+
+        botonsheet=findViewById(R.id.botonsheet);
+        View vista = LayoutInflater.from(getApplicationContext()).inflate(R.layout.bottom_sheet_dialog, null);
+        linearLayoutItems = vista.findViewById(R.id.linearLayoutItems);
+        dialog = new BottomSheetDialog(MainActivity.this);
+        bottomSheet(dialog,vista);
 
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
@@ -184,6 +203,19 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         searchEditText.setTextColor(Color.BLACK); // Color del texto
         searchEditText.setHintTextColor(Color.GRAY); // Color del hint
 
+        adapter = new ArrayAdapter<String>(MainActivity.this, android.R.layout.simple_list_item_1, lista) {
+            @Override
+            public View getView(int position, View convertView, ViewGroup parent) {
+                View view = super.getView(position, convertView, parent);
+                TextView textView = (TextView) view.findViewById(android.R.id.text1);
+                textView.setTextColor(Color.BLACK); // Cambia el color del texto
+                return view;
+            }
+        };
+        listView.setAdapter(adapter);
+
+        cargarDatos();
+
         searchView.setOnQueryTextFocusChangeListener((v,hasfocus)->{
             if(!hasfocus){
                 searchView.setQuery("",false);
@@ -201,32 +233,20 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             searchView.setIconified(false);
             listView.setVisibility(View.VISIBLE);
 
+        });
+
             ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
             apiService.getFuentes().enqueue(new Callback<List<Fuentes>>() {
                 @Override
                 public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
                     List<Fuentes>fuente=response.body();
-                    for(Fuentes fuentes : fuente){
-                        barriosUnicos.add(fuentes.getBarrio());
-                    }
-                    for(String barrios:barriosUnicos){
-                        lista.add(barrios);
-                    }
-                    adapter = new ArrayAdapter<String>(MainActivity.this, android.R.layout.simple_list_item_1, lista) {
-                        @Override
-                        public View getView(int position, View convertView, ViewGroup parent) {
-                            View view = super.getView(position, convertView, parent);
-                            TextView textView = (TextView) view.findViewById(android.R.id.text1);
-                            textView.setTextColor(Color.BLACK); // Cambia el color del texto
-                            return view;
-                        }
-                    };
-                    listView.setAdapter(adapter);
+
                     searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
                         @Override
                         public boolean onQueryTextSubmit(String query) {
 
                             Map.clear();
+                            VaciarItems();
                             fuentesDelMapa(fuente, query);
 
                             hideKeyboard(searchView);
@@ -262,6 +282,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                         // Limpiar los marcadores actuales
                         Map.clear();
+                        VaciarItems();
                         fuentesDelMapa(fuente, selectedItem);
 
                         hideKeyboard(searchView);
@@ -273,6 +294,28 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     t.printStackTrace(); // Manejo de errores
                 }
             });
+
+    }
+
+    private void cargarDatos() {
+        ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
+        apiService.getFuentes().enqueue(new Callback<List<Fuentes>>() {
+            @Override
+            public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
+                List<Fuentes> fuente = response.body();
+                if (fuente != null) {
+                    for (Fuentes fuentes : fuente) {
+                        barriosUnicos.add(fuentes.getBarrio());
+                    }
+                    lista.addAll(barriosUnicos);
+                    adapter.notifyDataSetChanged();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<Fuentes>> call, Throwable t) {
+                t.printStackTrace();
+            }
         });
     }
 
@@ -290,7 +333,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 currentMarkers.put(key, addMarker(fuentes,fuentes.getEstado()));
                 boundsBuilder.include(latLng);
                 found = true;
-
+                InsertarItem(fuentes);
             }
         }
 
@@ -459,6 +502,92 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         if (inputMethodManager != null) {
             inputMethodManager.hideSoftInputFromWindow(view.getWindowToken(), 0);
         }
+        //view.clearFocus();
+    }
+
+    private void InsertarItem(Fuentes fuente){
+        LinearLayout newItemContainer = new LinearLayout(MainActivity.this);
+        newItemContainer.setOrientation(LinearLayout.HORIZONTAL); // Los elementos se organizan horizontalmente (imagen + texto)
+        newItemContainer.setPadding(16, 16, 16, 16);
+        LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+
+        newItemContainer.setFocusable(false);
+        newItemContainer.setFocusableInTouchMode(false);
+
+        layoutParams.setMargins(0,0,0,15);
+        newItemContainer.setLayoutParams(layoutParams);
+
+        newItemContainer.setBackgroundResource(R.drawable.item_border);
+
+        // Crear la imagen
+        // String estado=fuente.getEstado();
+
+        ImageView imageView = new ImageView(MainActivity.this);
+        if(fuente.getEstado().equalsIgnoreCase("OPERATIVO")) {
+            imageView.setImageResource(R.drawable.enabled1);
+        }
+        else if(fuente.getEstado().equalsIgnoreCase("CERRADA_TEMPORALMENT")) {
+            imageView.setImageResource(R.drawable.maintenance1);
+        }
+        else if(fuente.getEstado().equalsIgnoreCase("FUERA_DE_SERVICIO")) {
+            imageView.setImageResource(R.drawable.disabled1);
+        }
+        imageView.setLayoutParams(new LinearLayout.LayoutParams(120, 120));  // Tamaño de la imagen
+
+        // Crear el TextView para el texto
+        TextView textView = new TextView(MainActivity.this);
+        textView.setText(fuente.getNomVia());
+        textView.setTextSize(18);
+        textView.setTextColor(getResources().getColor(R.color.black));
+        textView.setPadding(16, 0, 0, 0);  // Espaciado entre la imagen y el texto
+        textView.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        ));
+
+        // Añadir la imagen y el texto al contenedor
+        newItemContainer.addView(imageView);
+        newItemContainer.addView(textView);
+
+        newItemContainer.setOnClickListener(v -> {
+            // Aquí moverás el mapa al marcador con la latitud y longitud asociada
+            LatLng location = new LatLng(fuente.getLatitud(),fuente.getLongitud());
+            Map.moveCamera(CameraUpdateFactory.newLatLngZoom(location, 80));
+            dialog.dismiss();
+            hideKeyboard(v);
+        });
+
+        // Añadir el contenedor al LinearLayout principal
+        linearLayoutItems.addView(newItemContainer);
+    }
+
+    public void VaciarItems(){
+        linearLayoutItems.removeAllViews();
+    }
+
+    public void bottomSheet(BottomSheetDialog dialog,View vista){
+        dialog.setCancelable(true);
+        dialog.setContentView(vista);
+        gestureDetector = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
+            @Override
+            public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
+                // Detectar deslizamiento hacia arriba (swipe up)
+                if (e2.getY() < e1.getY()) { // Si el deslizamiento es hacia arriba
+                    dialog.show(); // Realizar acción
+                    return true;
+                }
+                return false;
+            }
+        });
+        View touchListenerView = findViewById(R.id.botonsheet);  // Este es un contenedor fuera del mapa
+        touchListenerView.setOnTouchListener((v, event) -> {
+            // Pasar el evento al GestureDetector para que maneje el deslizamiento
+            gestureDetector.onTouchEvent(event);
+            return true;
+        });
     }
 
 
@@ -506,6 +635,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     List<Fuentes> fuentes = response.body();
+                    VaciarItems();
                     for (Fuentes fuente : fuentes) {
                         Location fuenteLocation = new Location("");
                         fuenteLocation.setLatitude(fuente.getLatitud());
@@ -519,6 +649,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                                 currentMarkers.put(key, addMarker(fuente, fuente.getEstado()));
                             }
                             fuentesCercanas.add(fuente);
+                            InsertarItem(fuente);
                         }
                     }
                 }
