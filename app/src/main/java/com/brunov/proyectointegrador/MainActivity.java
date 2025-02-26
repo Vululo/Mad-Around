@@ -6,6 +6,7 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
 import android.location.Location;
+import android.nfc.Tag;
 import android.os.Bundle;
 
 import androidx.activity.EdgeToEdge;
@@ -41,6 +42,7 @@ import com.google.android.gms.tasks.Task;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 
 import android.Manifest;
+import android.os.Debug;
 import android.util.Log;
 import android.view.GestureDetector;
 import android.view.LayoutInflater;
@@ -94,6 +96,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private GestureDetector gestureDetector;
     BottomSheetDialog dialog;
     private boolean buscando,found=false;
+    private SearchView searchView;
 
 
 
@@ -197,7 +200,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private void BarraDeBusqueda() {
         ListView listView=findViewById(R.id.lista);
 
-        SearchView searchView = findViewById(R.id.busqueda);
+        searchView = findViewById(R.id.busqueda);
         EditText searchEditText = searchView.findViewById(androidx.appcompat.R.id.search_src_text);
         searchEditText.setHint("Busqueda por Barrio");
         searchEditText.setTextColor(Color.BLACK); // Color del texto
@@ -221,6 +224,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 searchView.setQuery("",false);
                 listView.setVisibility(View.GONE);
             }
+            else{
+                searchView.clearFocus();
+                listView.setVisibility(View.GONE);
+            }
         });
         searchView.setOnClickListener(v -> {
             Log.e("CurrentMarkerClear","Limpiado de marcadores del Buscador");
@@ -232,6 +239,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             lista.clear();
             searchView.setIconified(false);
             listView.setVisibility(View.VISIBLE);
+            VaciarItems();
 
         });
 
@@ -248,7 +256,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                             Map.clear();
                             VaciarItems();
                             fuentesDelMapa(fuente, query);
-
+                            isSearching=true;
                             hideKeyboard(searchView);
                             // Ocultar el ListView después de la selección
                             listView.setVisibility(View.GONE);
@@ -265,6 +273,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                                 isSearching=false;
                                 listView.setVisibility(View.GONE);
                                 Map.clear();
+                                VaciarItems();
                                 fuentesBusqueda.clear();
                                 currentMarkers.clear();
                                 configureLocationUpdates();
@@ -282,10 +291,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                         // Limpiar los marcadores actuales
                         Map.clear();
-                        VaciarItems();
                         fuentesDelMapa(fuente, selectedItem);
-
-                        hideKeyboard(searchView);
+                        isSearching=true;
+                        hideKeyboard(view);
                         listView.setVisibility(View.GONE);
                     });
                 }
@@ -321,6 +329,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private void fuentesDelMapa(List<Fuentes> fuente, String selectedItem) {
         LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder(); // Para ajustar la cámara
+        VaciarItems();
 
         boolean found = false; // Para saber si se encontraron fuentes en el barrio
 
@@ -502,7 +511,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         if (inputMethodManager != null) {
             inputMethodManager.hideSoftInputFromWindow(view.getWindowToken(), 0);
         }
-        //view.clearFocus();
+        view.clearFocus();
     }
 
     private void InsertarItem(Fuentes fuente){
@@ -606,7 +615,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void configureLocationUpdates() {
-
         LocationRequest locationRequest = new LocationRequest
                 .Builder(Priority.PRIORITY_HIGH_ACCURACY,10000)
                 .build();
@@ -616,7 +624,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             public void onLocationResult(@NonNull LocationResult locationResult) {
                 Location userLocation = locationResult.getLastLocation();
                 if (userLocation != null) {
-                    updateMapWithUserLocation(userLocation);
+                    Log.d("DEBUG","Buscando?:"+isSearching);
+                    if(!isSearching)
+                        updateMapWithUserLocation(userLocation);
                 }
             }
         };
