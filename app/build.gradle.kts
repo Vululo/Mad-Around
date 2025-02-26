@@ -10,14 +10,9 @@ android {
         applicationId = "com.brunov.proyectointegrador"
         minSdk = 24
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 3
+        versionName = "1.11"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        val apiKey: String = project.findProperty("MAPS_API_KEY") as String? ?: ""
-
-        buildConfigField("String", "GOOGLE_MAPS_API_KEY", "\"$apiKey\"")
-        resValue("string", "google_maps_key", apiKey)
     }
 
     buildTypes {
