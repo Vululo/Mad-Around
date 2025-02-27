@@ -6,7 +6,6 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
 import android.location.Location;
-import android.nfc.Tag;
 import android.os.Bundle;
 
 import androidx.activity.EdgeToEdge;
@@ -15,7 +14,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
-import androidx.core.graphics.drawable.DrawableCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.appcompat.widget.SearchView;
@@ -42,7 +40,6 @@ import com.google.android.gms.tasks.Task;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 
 import android.Manifest;
-import android.os.Debug;
 import android.util.Log;
 import android.view.GestureDetector;
 import android.view.LayoutInflater;
@@ -56,17 +53,15 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
-//import android.widget.SearchView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import org.json.JSONArray;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
+
 import java.util.Set;
 
 import retrofit2.Call;
@@ -92,13 +87,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     boolean isSearching=false;
 
     private LinearLayout linearLayoutItems;
-    private Button botonsheet;
     private GestureDetector gestureDetector;
     BottomSheetDialog dialog;
-    private boolean buscando,found=false;
+    private boolean found=false;
     private SearchView searchView;
-
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -108,7 +100,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         BarraDeBusqueda();
 
-        botonsheet=findViewById(R.id.botonsheet);
         View vista = LayoutInflater.from(getApplicationContext()).inflate(R.layout.bottom_sheet_dialog, null);
         linearLayoutItems = vista.findViewById(R.id.linearLayoutItems);
         dialog = new BottomSheetDialog(MainActivity.this);
@@ -241,14 +232,27 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             listView.setVisibility(View.VISIBLE);
             VaciarItems();
 
-        });
-
             ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
             apiService.getFuentes().enqueue(new Callback<List<Fuentes>>() {
                 @Override
                 public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
                     List<Fuentes>fuente=response.body();
-
+                    for(Fuentes fuentes : fuente){
+                        barriosUnicos.add(fuentes.getBarrio());
+                    }
+                    for(String barrios:barriosUnicos){
+                        lista.add(barrios);
+                    }
+                    adapter = new ArrayAdapter<String>(MainActivity.this, android.R.layout.simple_list_item_1, lista) {
+                        @Override
+                        public View getView(int position, View convertView, ViewGroup parent) {
+                            View view = super.getView(position, convertView, parent);
+                            TextView textView = (TextView) view.findViewById(android.R.id.text1);
+                            textView.setTextColor(Color.BLACK); // Cambia el color del texto
+                            return view;
+                        }
+                    };
+                    listView.setAdapter(adapter);
                     searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
                         @Override
                         public boolean onQueryTextSubmit(String query) {
@@ -293,7 +297,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         Map.clear();
                         fuentesDelMapa(fuente, selectedItem);
                         isSearching=true;
-                        hideKeyboard(view);
+                        hideKeyboard(searchView);
                         listView.setVisibility(View.GONE);
                     });
                 }
@@ -302,7 +306,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     t.printStackTrace(); // Manejo de errores
                 }
             });
-
+        });
     }
 
     private void cargarDatos() {
@@ -330,7 +334,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private void fuentesDelMapa(List<Fuentes> fuente, String selectedItem) {
         LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder(); // Para ajustar la cámara
         VaciarItems();
-
         boolean found = false; // Para saber si se encontraron fuentes en el barrio
 
         // Agregar todos los marcadores del barrio seleccionado
@@ -615,8 +618,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void configureLocationUpdates() {
+
         LocationRequest locationRequest = new LocationRequest
-                .Builder(Priority.PRIORITY_HIGH_ACCURACY,10000)
+                .Builder(Priority.PRIORITY_HIGH_ACCURACY,1000)
+                .setMinUpdateIntervalMillis(500)
+                .setMaxUpdateDelayMillis(2000)
                 .build();
 
         LocationCallback locationCallback = new LocationCallback() {
@@ -624,9 +630,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             public void onLocationResult(@NonNull LocationResult locationResult) {
                 Location userLocation = locationResult.getLastLocation();
                 if (userLocation != null) {
-                    Log.d("DEBUG","Buscando?:"+isSearching);
-                    if(!isSearching)
-                        updateMapWithUserLocation(userLocation);
+                    updateMapWithUserLocation(userLocation);
                 }
             }
         };
