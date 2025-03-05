@@ -43,9 +43,9 @@
         android:visibility="gone"/>
 
     <HorizontalScrollView
-        android:layout_width="350dp"
+        android:id="@+id/horizontalScrollView"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="30dp"
         android:layout_below="@id/busqueda"
         android:fillViewport="true"
         android:scrollbars="none">
@@ -54,56 +54,59 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:padding="8dp">
+            android:padding="6dp">
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/available"
+                android:layout_width="130dp"
+                android:layout_height="42dp"
+                android:layout_alignParentEnd="true"
+                android:layout_marginTop="8dp"
+                android:layout_marginEnd="12dp"
+                android:background="@drawable/enabled1tag" />
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/maintenance"
+                android:layout_width="155dp"
+                android:layout_height="42dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginEnd="12dp"
+                android:layout_toStartOf="@+id/available"
+                android:background="@drawable/maintenance1tag" />
 
             <androidx.appcompat.widget.AppCompatButton
                 android:id="@+id/disabled"
                 android:layout_width="150dp"
-                android:layout_height="48dp"
+                android:layout_height="42dp"
                 android:layout_marginTop="8dp"
-                android:layout_marginEnd="20dp"
+                android:layout_marginEnd="12dp"
                 android:layout_toStartOf="@+id/maintenance"
-                android:background="@drawable/disabled1" />
-
-            <androidx.appcompat.widget.AppCompatButton
-                android:id="@+id/maintenance"
-                android:layout_width="150dp"
-                android:layout_height="48dp"
-                android:layout_marginTop="8dp"
-                android:layout_marginEnd="20dp"
-                android:layout_toStartOf="@+id/available"
-                android:background="@drawable/maintenance1" />
-
-            <androidx.appcompat.widget.AppCompatButton
-                android:id="@+id/available"
-                android:layout_width="150dp"
-                android:layout_height="48dp"
-                android:layout_alignParentEnd="true"
-                android:layout_marginTop="8dp"
-                android:layout_marginEnd="20dp"
-                android:background="@drawable/enabled1" />
-
-            <androidx.appcompat.widget.AppCompatButton
-                android:id="@+id/people"
-                android:layout_width="150dp"
-                android:layout_height="48dp"
-                android:layout_alignParentEnd="true"
-                android:layout_marginTop="8dp"
-                android:layout_marginEnd="20dp"
-                android:background="@drawable/people1" />
-
-            <androidx.appcompat.widget.AppCompatButton
-                android:id="@+id/pet"
-                android:layout_width="150dp"
-                android:layout_height="48dp"
-                android:layout_alignParentEnd="true"
-                android:layout_marginTop="8dp"
-                android:layout_marginEnd="20dp"
-                android:background="@drawable/paw1" />
+                android:background="@drawable/disabled1tag" />
+            
             <!-- Agrega más botones aquí -->
 
         </LinearLayout>
     </HorizontalScrollView>
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/people"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_below="@+id/busqueda"
+        android:layout_alignParentEnd="true"
+        android:layout_marginTop="75dp"
+        android:layout_marginEnd="24dp"
+        android:background="@drawable/people1" />
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/pet"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_below="@+id/people"
+        android:layout_alignParentEnd="true"
+        android:layout_marginTop="12dp"
+        android:layout_marginEnd="24dp"
+        android:background="@drawable/paw1" />
 
     <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/center"

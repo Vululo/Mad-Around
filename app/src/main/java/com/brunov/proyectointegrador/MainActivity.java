@@ -135,19 +135,19 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         available.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                toggleFiltro("OPERATIVO", available, R.drawable.enabled2, R.drawable.enabled1,"Estado");
+                toggleFiltro("OPERATIVO", available, R.drawable.enabled2tag, R.drawable.enabled1tag,"Estado");
             }
         });
         maintenance.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                toggleFiltro("CERRADA_TEMPORALMENT", maintenance, R.drawable.maintenance2, R.drawable.maintenance1,"Estado");
+                toggleFiltro("CERRADA_TEMPORALMENT", maintenance, R.drawable.maintenance2tag, R.drawable.maintenance1tag,"Estado");
             }
         });
         disabled.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                toggleFiltro("FUERA_DE_SERVICIO", disabled, R.drawable.disabled2, R.drawable.disabled1,"Estado");
+                toggleFiltro("FUERA_DE_SERVICIO", disabled, R.drawable.disabled2tag, R.drawable.disabled1tag,"Estado");
             }
         });
 
