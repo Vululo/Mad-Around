@@ -37,27 +37,31 @@ import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.Task;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 
 import android.Manifest;
 import android.util.Log;
+import android.view.GestureDetector;
+import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ListView;
-//import android.widget.SearchView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import org.json.JSONArray;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
+
 import java.util.Set;
 
 import retrofit2.Call;
@@ -82,7 +86,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     boolean isSearching=false;
 
-
+    private LinearLayout linearLayoutItems;
+    private GestureDetector gestureDetector;
+    BottomSheetDialog dialog;
+    private boolean found=false;
+    private SearchView searchView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -91,6 +99,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         setContentView(R.layout.activity_main);
 
         BarraDeBusqueda();
+
+        View vista = LayoutInflater.from(getApplicationContext()).inflate(R.layout.bottom_sheet_dialog, null);
+        linearLayoutItems = vista.findViewById(R.id.linearLayoutItems);
+        dialog = new BottomSheetDialog(MainActivity.this);
+        bottomSheet(dialog,vista);
 
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
@@ -122,19 +135,19 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         available.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                toggleFiltro("OPERATIVO", available, R.drawable.enabled2, R.drawable.enabled1,"Estado");
+                toggleFiltro("OPERATIVO", available, R.drawable.enabled2tag, R.drawable.enabled1tag,"Estado");
             }
         });
         maintenance.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                toggleFiltro("CERRADA_TEMPORALMENT", maintenance, R.drawable.maintenance2, R.drawable.maintenance1,"Estado");
+                toggleFiltro("CERRADA_TEMPORALMENT", maintenance, R.drawable.maintenance2tag, R.drawable.maintenance1tag,"Estado");
             }
         });
         disabled.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                toggleFiltro("FUERA_DE_SERVICIO", disabled, R.drawable.disabled2, R.drawable.disabled1,"Estado");
+                toggleFiltro("FUERA_DE_SERVICIO", disabled, R.drawable.disabled2tag, R.drawable.disabled1tag,"Estado");
             }
         });
 
@@ -178,15 +191,32 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private void BarraDeBusqueda() {
         ListView listView=findViewById(R.id.lista);
 
-        SearchView searchView = findViewById(R.id.busqueda);
+        searchView = findViewById(R.id.busqueda);
         EditText searchEditText = searchView.findViewById(androidx.appcompat.R.id.search_src_text);
         searchEditText.setHint("Busqueda por Barrio");
         searchEditText.setTextColor(Color.BLACK); // Color del texto
         searchEditText.setHintTextColor(Color.GRAY); // Color del hint
 
+        adapter = new ArrayAdapter<String>(MainActivity.this, android.R.layout.simple_list_item_1, lista) {
+            @Override
+            public View getView(int position, View convertView, ViewGroup parent) {
+                View view = super.getView(position, convertView, parent);
+                TextView textView = (TextView) view.findViewById(android.R.id.text1);
+                textView.setTextColor(Color.BLACK); // Cambia el color del texto
+                return view;
+            }
+        };
+        listView.setAdapter(adapter);
+
+        cargarDatos();
+
         searchView.setOnQueryTextFocusChangeListener((v,hasfocus)->{
             if(!hasfocus){
                 searchView.setQuery("",false);
+                listView.setVisibility(View.GONE);
+            }
+            else{
+                searchView.clearFocus();
                 listView.setVisibility(View.GONE);
             }
         });
@@ -200,6 +230,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             lista.clear();
             searchView.setIconified(false);
             listView.setVisibility(View.VISIBLE);
+            VaciarItems();
 
             ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
             apiService.getFuentes().enqueue(new Callback<List<Fuentes>>() {
@@ -227,8 +258,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         public boolean onQueryTextSubmit(String query) {
 
                             Map.clear();
+                            VaciarItems();
                             fuentesDelMapa(fuente, query);
-
+                            isSearching=true;
                             hideKeyboard(searchView);
                             // Ocultar el ListView después de la selección
                             listView.setVisibility(View.GONE);
@@ -245,6 +277,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                                 isSearching=false;
                                 listView.setVisibility(View.GONE);
                                 Map.clear();
+                                VaciarItems();
                                 fuentesBusqueda.clear();
                                 currentMarkers.clear();
                                 configureLocationUpdates();
@@ -263,7 +296,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         // Limpiar los marcadores actuales
                         Map.clear();
                         fuentesDelMapa(fuente, selectedItem);
-
+                        isSearching=true;
                         hideKeyboard(searchView);
                         listView.setVisibility(View.GONE);
                     });
@@ -276,9 +309,31 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         });
     }
 
+    private void cargarDatos() {
+        ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
+        apiService.getFuentes().enqueue(new Callback<List<Fuentes>>() {
+            @Override
+            public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
+                List<Fuentes> fuente = response.body();
+                if (fuente != null) {
+                    for (Fuentes fuentes : fuente) {
+                        barriosUnicos.add(fuentes.getBarrio());
+                    }
+                    lista.addAll(barriosUnicos);
+                    adapter.notifyDataSetChanged();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<Fuentes>> call, Throwable t) {
+                t.printStackTrace();
+            }
+        });
+    }
+
     private void fuentesDelMapa(List<Fuentes> fuente, String selectedItem) {
         LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder(); // Para ajustar la cámara
-
+        VaciarItems();
         boolean found = false; // Para saber si se encontraron fuentes en el barrio
 
         // Agregar todos los marcadores del barrio seleccionado
@@ -290,7 +345,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 currentMarkers.put(key, addMarker(fuentes,fuentes.getEstado()));
                 boundsBuilder.include(latLng);
                 found = true;
-
+                InsertarItem(fuentes);
             }
         }
 
@@ -349,6 +404,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     @Override
     public void onMapReady(@NonNull GoogleMap googleMap) {
+        Log.i("Ready", "onMapReady");
         Map = googleMap;
         LatLngBounds mapBounds = new LatLngBounds(
                 new LatLng(40.3121,-3.8466),
@@ -360,7 +416,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         // Deshabilitar el botón de ubicación del usuario
         Map.getUiSettings().setMyLocationButtonEnabled(false);
-
         // Solicitar permisos
         requestLocationPermission();
 
@@ -398,13 +453,17 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             if(ContextCompat.checkSelfPermission(this,Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED){
                 Task<Location> locationResult = fusedLocationProviderClient.getLastLocation();
                 locationResult.addOnCompleteListener(this,task ->{
+                    isSearching=false;
                     if (task.isSuccessful() && task.getResult() != null) {
                         // Obtén la última ubicación conocida
+
                         Location location = task.getResult();
                         LatLng userLocation = new LatLng(location.getLatitude(), location.getLongitude());
-
+                        Log.i("DeviceLocation", "getDeviceLocation");
                         // Mueve la cámara al usuario
                         Map.animateCamera(CameraUpdateFactory.newLatLngZoom(userLocation, 15));
+
+                        updateMapWithUserLocation(location);
                     } else {
                         Toast.makeText(this, "No se pudo obtener la ubicación actual", Toast.LENGTH_SHORT).show();
                     }
@@ -419,6 +478,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED) {
             Map.setMyLocationEnabled(true);
+            Log.i("LocationEnabled", "enableUserLocation");
             getDeviceLocation();
         }
 
@@ -431,6 +491,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
                     LOCATION_PERMISSION_REQUEST_CODE);
         } else {
+            Log.i("RequestLocation", "requestLocationPermission:Yep");
             enableUserLocation();
         }
     }
@@ -441,6 +502,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 enableUserLocation();
+                getDeviceLocation();
             }
         }
     }
@@ -459,6 +521,92 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         if (inputMethodManager != null) {
             inputMethodManager.hideSoftInputFromWindow(view.getWindowToken(), 0);
         }
+        view.clearFocus();
+    }
+
+    private void InsertarItem(Fuentes fuente){
+        LinearLayout newItemContainer = new LinearLayout(MainActivity.this);
+        newItemContainer.setOrientation(LinearLayout.HORIZONTAL); // Los elementos se organizan horizontalmente (imagen + texto)
+        newItemContainer.setPadding(16, 16, 16, 16);
+        LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+
+        newItemContainer.setFocusable(false);
+        newItemContainer.setFocusableInTouchMode(false);
+
+        layoutParams.setMargins(0,0,0,15);
+        newItemContainer.setLayoutParams(layoutParams);
+
+        newItemContainer.setBackgroundResource(R.drawable.item_border);
+
+        // Crear la imagen
+        // String estado=fuente.getEstado();
+
+        ImageView imageView = new ImageView(MainActivity.this);
+        if(fuente.getEstado().equalsIgnoreCase("OPERATIVO")) {
+            imageView.setImageResource(R.drawable.enabled1);
+        }
+        else if(fuente.getEstado().equalsIgnoreCase("CERRADA_TEMPORALMENT")) {
+            imageView.setImageResource(R.drawable.maintenance1);
+        }
+        else if(fuente.getEstado().equalsIgnoreCase("FUERA_DE_SERVICIO")) {
+            imageView.setImageResource(R.drawable.disabled1);
+        }
+        imageView.setLayoutParams(new LinearLayout.LayoutParams(120, 120));  // Tamaño de la imagen
+
+        // Crear el TextView para el texto
+        TextView textView = new TextView(MainActivity.this);
+        textView.setText(fuente.getNomVia());
+        textView.setTextSize(18);
+        textView.setTextColor(getResources().getColor(R.color.black));
+        textView.setPadding(16, 0, 0, 0);  // Espaciado entre la imagen y el texto
+        textView.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        ));
+
+        // Añadir la imagen y el texto al contenedor
+        newItemContainer.addView(imageView);
+        newItemContainer.addView(textView);
+
+        newItemContainer.setOnClickListener(v -> {
+            // Aquí moverás el mapa al marcador con la latitud y longitud asociada
+            LatLng location = new LatLng(fuente.getLatitud(),fuente.getLongitud());
+            Map.moveCamera(CameraUpdateFactory.newLatLngZoom(location, 80));
+            dialog.dismiss();
+            hideKeyboard(v);
+        });
+
+        // Añadir el contenedor al LinearLayout principal
+        linearLayoutItems.addView(newItemContainer);
+    }
+
+    public void VaciarItems(){
+        linearLayoutItems.removeAllViews();
+    }
+
+    public void bottomSheet(BottomSheetDialog dialog,View vista){
+        dialog.setCancelable(true);
+        dialog.setContentView(vista);
+        gestureDetector = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
+            @Override
+            public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
+                // Detectar deslizamiento hacia arriba (swipe up)
+                if (e2.getY() < e1.getY()) { // Si el deslizamiento es hacia arriba
+                    dialog.show(); // Realizar acción
+                    return true;
+                }
+                return false;
+            }
+        });
+        View touchListenerView = findViewById(R.id.botonsheet);  // Este es un contenedor fuera del mapa
+        touchListenerView.setOnTouchListener((v, event) -> {
+            // Pasar el evento al GestureDetector para que maneje el deslizamiento
+            gestureDetector.onTouchEvent(event);
+            return true;
+        });
     }
 
 
@@ -477,11 +625,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void configureLocationUpdates() {
-
+        Log.e("ConfigureLocation", "configureLocation: Updating");
         LocationRequest locationRequest = new LocationRequest
-                .Builder(Priority.PRIORITY_HIGH_ACCURACY,10000)
-                .build();
-
+            .Builder(Priority.PRIORITY_HIGH_ACCURACY,1000)
+            .setMinUpdateIntervalMillis(500)
+            .setMaxUpdateDelayMillis(1500)
+            .build();
         LocationCallback locationCallback = new LocationCallback() {
             @Override
             public void onLocationResult(@NonNull LocationResult locationResult) {
@@ -500,12 +649,15 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private void updateMapWithUserLocation(Location userLocation) {
         if(isSearching) return;
+
         ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
         apiService.getFuentes().enqueue(new Callback<List<Fuentes>>() {
             @Override
             public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
                 if (response.isSuccessful() && response.body() != null) {
+                    Log.e("Marcadores", "Cargando Localizacion" );
                     List<Fuentes> fuentes = response.body();
+                    VaciarItems();
                     for (Fuentes fuente : fuentes) {
                         Location fuenteLocation = new Location("");
                         fuenteLocation.setLatitude(fuente.getLatitud());
@@ -519,6 +671,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                                 currentMarkers.put(key, addMarker(fuente, fuente.getEstado()));
                             }
                             fuentesCercanas.add(fuente);
+                            InsertarItem(fuente);
                         }
                     }
                 }
