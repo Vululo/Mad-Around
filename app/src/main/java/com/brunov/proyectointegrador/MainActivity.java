@@ -405,6 +405,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                         // Mueve la cámara al usuario
                         Map.animateCamera(CameraUpdateFactory.newLatLngZoom(userLocation, 15));
+
+                        updateMapWithUserLocation(location);
                     } else {
                         Toast.makeText(this, "No se pudo obtener la ubicación actual", Toast.LENGTH_SHORT).show();
                     }
@@ -441,6 +443,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 enableUserLocation();
+                getDeviceLocation();
             }
         }
     }
