@@ -1,6 +1,12 @@
 package com.brunov.proyectointegrador;
 
-public class Fuentes {
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import com.google.android.gms.maps.model.LatLng;
+import com.google.maps.android.clustering.ClusterItem;
+
+public class Fuentes implements ClusterItem {
 
     private String BARRIO;
     private String ESTADO;
@@ -9,6 +15,7 @@ public class Fuentes {
     private String tipoVia;
     private String NOM_VIA;
     private String USO;
+    private LatLng posicion;
 
     public String getBarrio() { return BARRIO; }
     public void setBarrio(String BARRIO) { this.BARRIO = BARRIO; }
@@ -28,4 +35,22 @@ public class Fuentes {
     public String getUso() { return USO; }
     public void setUso(String Uso) { this.USO = Uso; }
 
+    @NonNull
+    @Override
+    public LatLng getPosition() {
+        this.posicion = new LatLng(this.LATITUD,this.LONGITUD);
+        return posicion;
+    }
+
+    @Nullable
+    @Override
+    public String getTitle() {
+        return "";
+    }
+
+    @Nullable
+    @Override
+    public String getSnippet() {
+        return "";
+    }
 }
