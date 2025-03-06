@@ -419,7 +419,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         // Solicitar permisos
         requestLocationPermission();
 
-
+        configureLocationUpdates();
     }
 
     private Marker addMarker(Fuentes fuente,String estado){
@@ -462,7 +462,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         Log.i("DeviceLocation", "getDeviceLocation");
                         // Mueve la cámara al usuario
                         Map.animateCamera(CameraUpdateFactory.newLatLngZoom(userLocation, 15));
-                        configureLocationUpdates();
+
+                        updateMapWithUserLocation(location);
                     } else {
                         Toast.makeText(this, "No se pudo obtener la ubicación actual", Toast.LENGTH_SHORT).show();
                     }
@@ -501,6 +502,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 enableUserLocation();
+                getDeviceLocation();
             }
         }
     }
@@ -632,10 +634,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         LocationCallback locationCallback = new LocationCallback() {
             @Override
             public void onLocationResult(@NonNull LocationResult locationResult) {
-            Location userLocation = locationResult.getLastLocation();
-            if (userLocation != null) {
-                updateMapWithUserLocation(userLocation);
-            }
+                Location userLocation = locationResult.getLastLocation();
+                if (userLocation != null) {
+                    updateMapWithUserLocation(userLocation);
+                }
             }
         };
 
