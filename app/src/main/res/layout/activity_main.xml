@@ -28,7 +28,8 @@
     <androidx.appcompat.widget.SearchView
         android:id="@+id/busqueda"
         style="@style/barrabusqueda"
-        app:queryHint="Busqueda aqui"/>
+        app:queryHint="Busqueda aqui"
+        />
 
     <ListView
         android:id="@+id/lista"
@@ -40,7 +41,8 @@
         android:layout_marginStart="21dp"
         android:layout_marginEnd="21dp"
         android:background="@color/white"
-        android:visibility="gone"/>
+        android:visibility="gone"
+        android:elevation="5dp"/>
 
     <HorizontalScrollView
         android:id="@+id/horizontalScrollView"

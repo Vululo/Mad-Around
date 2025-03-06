@@ -404,6 +404,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     @Override
     public void onMapReady(@NonNull GoogleMap googleMap) {
+        Log.i("Ready", "onMapReady");
         Map = googleMap;
         LatLngBounds mapBounds = new LatLngBounds(
                 new LatLng(40.3121,-3.8466),
@@ -415,11 +416,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         // Deshabilitar el botón de ubicación del usuario
         Map.getUiSettings().setMyLocationButtonEnabled(false);
-
         // Solicitar permisos
         requestLocationPermission();
 
-        configureLocationUpdates();
+
     }
 
     private Marker addMarker(Fuentes fuente,String estado){
@@ -453,13 +453,16 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             if(ContextCompat.checkSelfPermission(this,Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED){
                 Task<Location> locationResult = fusedLocationProviderClient.getLastLocation();
                 locationResult.addOnCompleteListener(this,task ->{
+                    isSearching=false;
                     if (task.isSuccessful() && task.getResult() != null) {
                         // Obtén la última ubicación conocida
+
                         Location location = task.getResult();
                         LatLng userLocation = new LatLng(location.getLatitude(), location.getLongitude());
-
+                        Log.i("DeviceLocation", "getDeviceLocation");
                         // Mueve la cámara al usuario
                         Map.animateCamera(CameraUpdateFactory.newLatLngZoom(userLocation, 15));
+                        configureLocationUpdates();
                     } else {
                         Toast.makeText(this, "No se pudo obtener la ubicación actual", Toast.LENGTH_SHORT).show();
                     }
@@ -474,6 +477,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED) {
             Map.setMyLocationEnabled(true);
+            Log.i("LocationEnabled", "enableUserLocation");
             getDeviceLocation();
         }
 
@@ -486,6 +490,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
                     LOCATION_PERMISSION_REQUEST_CODE);
         } else {
+            Log.i("RequestLocation", "requestLocationPermission:Yep");
             enableUserLocation();
         }
     }
@@ -618,20 +623,19 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void configureLocationUpdates() {
-
+        Log.e("ConfigureLocation", "configureLocation: Updating");
         LocationRequest locationRequest = new LocationRequest
-                .Builder(Priority.PRIORITY_HIGH_ACCURACY,1000)
-                .setMinUpdateIntervalMillis(500)
-                .setMaxUpdateDelayMillis(2000)
-                .build();
-
+            .Builder(Priority.PRIORITY_HIGH_ACCURACY,1000)
+            .setMinUpdateIntervalMillis(500)
+            .setMaxUpdateDelayMillis(1500)
+            .build();
         LocationCallback locationCallback = new LocationCallback() {
             @Override
             public void onLocationResult(@NonNull LocationResult locationResult) {
-                Location userLocation = locationResult.getLastLocation();
-                if (userLocation != null) {
-                    updateMapWithUserLocation(userLocation);
-                }
+            Location userLocation = locationResult.getLastLocation();
+            if (userLocation != null) {
+                updateMapWithUserLocation(userLocation);
+            }
             }
         };
 
@@ -643,11 +647,13 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private void updateMapWithUserLocation(Location userLocation) {
         if(isSearching) return;
+
         ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
         apiService.getFuentes().enqueue(new Callback<List<Fuentes>>() {
             @Override
             public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
                 if (response.isSuccessful() && response.body() != null) {
+                    Log.e("Marcadores", "Cargando Localizacion" );
                     List<Fuentes> fuentes = response.body();
                     VaciarItems();
                     for (Fuentes fuente : fuentes) {
