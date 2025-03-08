@@ -628,8 +628,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         Log.e("ConfigureLocation", "configureLocation: Updating");
         LocationRequest locationRequest = new LocationRequest
             .Builder(Priority.PRIORITY_HIGH_ACCURACY,1000)
-            .setMinUpdateIntervalMillis(500)
-            .setMaxUpdateDelayMillis(1500)
+            .setMinUpdateIntervalMillis(2000)
+            .setMaxUpdateDelayMillis(5000)
             .build();
         LocationCallback locationCallback = new LocationCallback() {
             @Override
