@@ -222,6 +222,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
         });
         searchView.setOnClickListener(v -> {
+            searchView.setIconified(false);
             Log.e("CurrentMarkerClear","Limpiado de marcadores del Buscador");
             isSearching=true;
             barriosUnicos.clear();
@@ -283,8 +284,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                             } else {
                                 listView.setVisibility(View.VISIBLE);
                             }
+
                             return false;
                         }
+
                     });
 
                     listView.setOnItemClickListener((parent, view, position, id) -> {
