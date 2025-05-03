@@ -73,7 +73,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
     private static final int RADIUS_METERS = 500; // Radio en metros (500 m)
     private FusedLocationProviderClient fusedLocationProviderClient;
-    private LocationCallback locationCallback;
 
     private HashMap<String, Marker> currentMarkers = new HashMap<>();
 
@@ -182,15 +181,16 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 break;
         }
         if(isSearching){
-            actualizarMarcadores(fuentesBusqueda);
+            actualizarMarcadoresBusqueda();
         }else{
-            actualizarMarcadores(fuentesCercanas);
+            actualizarMarcadoresLocalizacion();
         }
 
     }
 
     private void BarraDeBusqueda() {
         ListView listView=findViewById(R.id.lista);
+
         searchView = findViewById(R.id.busqueda);
         EditText searchEditText = searchView.findViewById(androidx.appcompat.R.id.search_src_text);
         searchEditText.setHint("Busqueda por Barrio");
@@ -207,11 +207,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
         };
         listView.setAdapter(adapter);
+
         cargarDatos();
 
         searchView.setOnQueryTextFocusChangeListener((v,hasfocus)->{
-            Log.e("BarraDeBusqueda", "BarraDeBusqueda" );
-            isSearching=true;
             if(!hasfocus){
                 searchView.setQuery("",false);
                 listView.setVisibility(View.GONE);
@@ -224,6 +223,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         searchView.setOnClickListener(v -> {
             searchView.setIconified(false);
             Log.e("CurrentMarkerClear","Limpiado de marcadores del Buscador");
+
             isSearching=true;
             barriosUnicos.clear();
             fuentesBusqueda.clear();
@@ -257,6 +257,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
                         @Override
                         public boolean onQueryTextSubmit(String query) {
+
                             Map.clear();
                             VaciarItems();
                             fuentesDelMapa(fuente, query);
@@ -273,6 +274,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                             adapter.getFilter().filter(newText);
                             if (newText.isEmpty()) {
                                 Log.e("CurrentMarkerClear","Limpiado de marcadores salir Buscador");
+
                                 isSearching=false;
                                 listView.setVisibility(View.GONE);
                                 Map.clear();
@@ -349,6 +351,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 InsertarItem(fuentes);
             }
         }
+
         if (found) {
             // Ajustar la cámara para que muestre todos los marcadores
             Map.animateCamera(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 100));
@@ -357,35 +360,48 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
-    private void actualizarMarcadores(List<Fuentes> fuentes) {
-        Log.e("CurrentMarkerClear","Limpiado de marcadores");
+    private void actualizarMarcadoresBusqueda() {
+        Log.e("CurrentMarkerClear","Limpiado de marcadores Buscados");
         currentMarkers.clear();
         Map.clear();
-        currentMarkers = listaDeFuentes(fuentes);
+        currentMarkers = listaDeFuentes(fuentesBusqueda);
+    }
+
+    private void actualizarMarcadoresLocalizacion(){
+        Log.e("CurrentMarkerClear","Limpiado de marcadores Cercanos");
+        currentMarkers.clear();
+        Map.clear();
+        currentMarkers = listaDeFuentes(fuentesCercanas);
     }
 
     private HashMap<String, Marker> listaDeFuentes(List<Fuentes> fuente){
         Log.e("NewMarcadores","Nueva Lista de Marcadores");
         HashMap<String, Marker> markers = new HashMap<>();
         LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder();
+
         for (Fuentes fuentes : fuente){
+
             String key = fuentes.getLongitud()+" "+fuentes.getLatitud();
+
             if(cumpleFiltros(fuentes)){
                 markers.put(key,addMarker(fuentes,fuentes.getEstado()));
             }
             boundsBuilder.include(new LatLng(fuentes.getLatitud(), fuentes.getLongitud()));
         }
+
         Map.animateCamera(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 100));
 
         return markers;
     }
 
+
     private boolean cumpleFiltros(Fuentes fuente) {
         boolean estadoCoincide = estadosSeleccionados.isEmpty() || estadosSeleccionados.contains(fuente.getEstado());
         boolean categoriaCoincide = categoriasSeleccionadas.isEmpty() ||
-                (fuente.getUso().contains("MASCOTAS")) ||
-                (fuente.getUso().contains("PERSONAS")) ||
+                (fuente.getUso().equals("MASCOTAS") && categoriasSeleccionadas.contains("MASCOTAS")) ||
+                (fuente.getUso().equals("PERSONAS") && categoriasSeleccionadas.contains("PERSONAS")) ||
                 (fuente.getUso().contains("PERSONAS_Y_MASCOTAS"));
+
         return estadoCoincide && categoriaCoincide;
     }
 
@@ -400,6 +416,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         Map.setLatLngBoundsForCameraTarget(mapBounds);
         Map.setMinZoomPreference(10);
         Map.setMaxZoomPreference(17);
+
         // Deshabilitar el botón de ubicación del usuario
         Map.getUiSettings().setMyLocationButtonEnabled(false);
         // Solicitar permisos
@@ -442,11 +459,13 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     isSearching=false;
                     if (task.isSuccessful() && task.getResult() != null) {
                         // Obtén la última ubicación conocida
+
                         Location location = task.getResult();
                         LatLng userLocation = new LatLng(location.getLatitude(), location.getLongitude());
                         Log.i("DeviceLocation", "getDeviceLocation");
                         // Mueve la cámara al usuario
                         Map.animateCamera(CameraUpdateFactory.newLatLngZoom(userLocation, 15));
+
                         updateMapWithUserLocation(location);
                     } else {
                         Toast.makeText(this, "No se pudo obtener la ubicación actual", Toast.LENGTH_SHORT).show();
@@ -525,6 +544,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         newItemContainer.setBackgroundResource(R.drawable.item_border);
 
+        // Crear la imagen
+        // String estado=fuente.getEstado();
+
         ImageView imageView = new ImageView(MainActivity.this);
         if(fuente.getEstado().equalsIgnoreCase("OPERATIVO")) {
             imageView.setImageResource(R.drawable.enabled1);
@@ -547,9 +569,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
         ));
+
         // Añadir la imagen y el texto al contenedor
         newItemContainer.addView(imageView);
         newItemContainer.addView(textView);
+
         newItemContainer.setOnClickListener(v -> {
             // Aquí moverás el mapa al marcador con la latitud y longitud asociada
             LatLng location = new LatLng(fuente.getLatitud(),fuente.getLongitud());
@@ -557,6 +581,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             dialog.dismiss();
             hideKeyboard(v);
         });
+
         // Añadir el contenedor al LinearLayout principal
         linearLayoutItems.addView(newItemContainer);
     }
@@ -587,45 +612,42 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         });
     }
 
+
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
         if (hasFocus) {
             getWindow().getDecorView().setSystemUiVisibility(
-                View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                    | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                    | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                    | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                    | View.SYSTEM_UI_FLAG_FULLSCREEN
-                    | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                            | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                            | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                            | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                            | View.SYSTEM_UI_FLAG_FULLSCREEN
+                            | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
         }
     }
 
     private void configureLocationUpdates() {
         Log.e("ConfigureLocation", "configureLocation: Updating");
-
         LocationRequest locationRequest = new LocationRequest
-            .Builder(Priority.PRIORITY_HIGH_ACCURACY, 10000)
-            .setMinUpdateIntervalMillis(5000)
-            .setMaxUpdateDelayMillis(15000)
+            .Builder(Priority.PRIORITY_HIGH_ACCURACY,1000)
+            .setMinUpdateIntervalMillis(2000)
+            .setMaxUpdateDelayMillis(5000)
             .build();
-
-        if (locationCallback == null) {
-            locationCallback = new LocationCallback() {
-                @Override
-                public void onLocationResult(@NonNull LocationResult locationResult) {
-                    Location userLocation = locationResult.getLastLocation();
-                    if (userLocation != null) {
-                        Log.e("Localizacion", "configureLocationUpdates");
-                        updateMapWithUserLocation(userLocation);
-                    }
+        LocationCallback locationCallback = new LocationCallback() {
+            @Override
+            public void onLocationResult(@NonNull LocationResult locationResult) {
+                Location userLocation = locationResult.getLastLocation();
+                if (userLocation != null) {
+                    updateMapWithUserLocation(userLocation);
                 }
-            };
-        }
+            }
+        };
+
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            fusedLocationProviderClient.removeLocationUpdates(locationCallback); // Asegura que no haya múltiples callbacks
             fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallback, getMainLooper());
         }
+
     }
 
     private void updateMapWithUserLocation(Location userLocation) {
