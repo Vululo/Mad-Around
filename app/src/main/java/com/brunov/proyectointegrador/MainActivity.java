@@ -72,10 +72,13 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private GoogleMap Map;
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
     private static final int RADIUS_METERS = 500; // Radio en metros (500 m)
+    private static final int RADIUS_METERS_BANCOS = 200; // Radio en metros (500 m)
     private FusedLocationProviderClient fusedLocationProviderClient;
 
     private HashMap<String, Marker> currentMarkersFuentes = new HashMap<>();
     private HashMap<String, Marker> currentMarkersBancos = new HashMap<>();
+    private HashMap<String, Marker> currentMarkersPuntosLimpios = new HashMap<>();
+
 
     private ArrayAdapter<String> adapter;
     private List<String> lista = new ArrayList<>();
@@ -457,10 +460,21 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         Marker marker = Map.addMarker(new MarkerOptions()
                         .position(latLng)
                         .title(banco.getNomVia())
-                .icon(getCustomMarker(R.drawable.markeroperative)));
+                .icon(getCustomMarker(R.drawable.markerbench)));
 
         return marker;
     }
+    private Marker addMarker(PuntosLimpios punto) {
+        LatLng latLng = new LatLng(punto.location.latitude, punto.location.longitude);
+
+        Marker marker = Map.addMarker(new MarkerOptions()
+                .position(latLng)
+                .title(punto.title)
+                .icon(getCustomMarker(R.drawable.markerpuntolimpio))); // Usa el ícono que prefieras
+
+        return marker;
+    }
+
 
     private void getDeviceLocation(){
         try{
@@ -665,30 +679,66 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         if(isSearching) return;
 
         ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
+
+        apiService.getPuntosLimpios().enqueue(new Callback<PuntosLimpiosResponse>() {
+            @Override
+            public void onResponse(Call<PuntosLimpiosResponse> call, Response<PuntosLimpiosResponse> response) {
+                if (response.isSuccessful() && response.body() != null) {
+
+                    Log.e("PuntosLimpios", "Cargando Localización");
+                    List<PuntosLimpios> puntos = response.body().puntos;
+                    Log.e("PuntosLimpios", "Cantidad recibida: " + puntos.size());
+
+                    VaciarItems(); // Si compartes función, asegúrate que no borra los bancos
+
+                    for (PuntosLimpios punto : puntos) {
+                        if (punto.location == null) continue;
+
+                        Location puntoLocation = new Location("");
+                        puntoLocation.setLatitude(punto.location.latitude);
+                        puntoLocation.setLongitude(punto.location.longitude);
+
+                        String key = punto.location.longitude + " " + punto.location.latitude;
+                        currentMarkersPuntosLimpios.put(key, addMarker(punto));
+                        /*
+                        float distancia = userLocation.distanceTo(puntoLocation);
+                        if (distancia <= RADIUS_METERS_PUNTOS_LIMPIOS) {
+                            if (!currentMarkersPuntosLimpios.containsKey(key)) {
+                                currentMarkersPuntosLimpios.put(key, addMarker(punto));
+                            }
+                        }*/
+                    }
+                }
+            }
+
+            @Override
+            public void onFailure(Call<PuntosLimpiosResponse> call, Throwable t) {
+                Log.e("PuntosLimpios", "Error al cargar puntos limpios: " + t.getMessage());
+            }
+        });
+
         apiService.getBancos().enqueue(new Callback<List<Bancos>>() {
             @Override
             public void onResponse(Call<List<Bancos>> call, Response<List<Bancos>> response) {
                 if (response.isSuccessful() && response.body() != null) {
+
                     Log.e("Bancos", "Cargando Localizacion" );
                     List<Bancos> bancos = response.body();
+                    Log.e("Bancos", "Cantidad recibida: " + bancos.size());
                     VaciarItems();
                     for (Bancos banco : bancos) {
-                        Location fuenteLocation = new Location("");
-                        fuenteLocation.setLatitude(banco.getLatitud());
-                        fuenteLocation.setLongitude(banco.getLongitud());
+                        Location bancoLocation = new Location("");
+                        bancoLocation.setLatitude(banco.getLatitud());
+                        bancoLocation.setLongitude(banco.getLongitud());
                         String key = banco.getLongitud()+" "+banco.getLatitud();
-                        currentMarkersBancos.put(key, addMarker(banco));
-                        Log.e("Banco", "Lat: " + banco.getLatitud() + " Long: " + banco.getLongitud());
-
-                        /*
                         // Calcula la distancia entre el usuario y la fuente
-                        float distancia = userLocation.distanceTo(fuenteLocation);
-                        if (distancia <= RADIUS_METERS) {
+                        float distancia = userLocation.distanceTo(bancoLocation);
+                        if (distancia <= RADIUS_METERS_BANCOS) {
                             // Si ya existe el marcador, no lo agrega de nuevo
                             if (!currentMarkersBancos.containsKey(key)) {
                                 currentMarkersBancos.put(key, addMarker(banco));
                             }
-                        }*/
+                        }
                     }
                 }
             }
@@ -698,7 +748,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
             }
         });
-        /*
+
         apiService.getFuentes().enqueue(new Callback<List<Fuentes>>() {
             @Override
             public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
@@ -728,6 +778,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             public void onFailure(Call<List<Fuentes>> call, Throwable t) {
                 t.printStackTrace(); // Manejo de errores
             }
-        });*/
+        });
     }
 }
