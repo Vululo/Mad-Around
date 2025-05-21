@@ -41,9 +41,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialog;
 
 import android.Manifest;
 import android.util.Log;
-import android.view.GestureDetector;
 import android.view.LayoutInflater;
-import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.view.ViewGroup;
@@ -72,7 +70,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private GoogleMap Map;
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
     private static final int RADIUS_METERS = 500; // Radio en metros (500 m)
-    private static final int RADIUS_METERS_BANCOS = 200; // Radio en metros (500 m)
+    private static final int RADIUS_METERS_BANCOS = 100; // Radio en metros (500 m)
+    private int modo = 1;
     private FusedLocationProviderClient fusedLocationProviderClient;
 
     private HashMap<String, Marker> currentMarkersFuentes = new HashMap<>();
@@ -91,7 +90,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     boolean isSearching=false;
 
     private LinearLayout linearLayoutItems;
-    private GestureDetector gestureDetector;
     BottomSheetDialog dialog;
     private boolean found=false;
     private SearchView searchView;
@@ -107,16 +105,18 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         View vista = LayoutInflater.from(getApplicationContext()).inflate(R.layout.bottom_sheet_dialog, null);
         linearLayoutItems = vista.findViewById(R.id.linearLayoutItems);
         dialog = new BottomSheetDialog(MainActivity.this);
-        bottomSheet(dialog,vista);
 
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
         Button pet = findViewById(R.id.pet);
         Button people = findViewById(R.id.people);
-        Button available = findViewById(R.id.available);
-        Button maintenance = findViewById(R.id.maintenance);
-        Button disabled = findViewById(R.id.disabled);
+        Button available = null;
+        Button maintenance = null;
+        Button disabled = null;
+        Button puntosLimpios = findViewById(R.id.puntos_limpios_btn);
+        Button fuentes = findViewById(R.id.fuentes_btn);
+        Button bancos = findViewById(R.id.bancos_btn);
         Button center = findViewById(R.id.center);
 
         // Button click listeners
@@ -135,7 +135,29 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 toggleFiltro("PERSONAS", people, R.drawable.people2, R.drawable.people1,"Categoria");
             }
         });
+        fuentes.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                modo = 1;
+                getDeviceLocation();
+            }
+        });
+        bancos.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                modo = 2;
+                getDeviceLocation();
+            }
+        });
+        puntosLimpios.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                modo = 3;
+                getDeviceLocation();
+            }
+        });
 
+        /*
         available.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -154,7 +176,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 toggleFiltro("FUERA_DE_SERVICIO", disabled, R.drawable.disabled2tag, R.drawable.disabled1tag,"Estado");
             }
         });
-
+        */
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
@@ -615,29 +637,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         linearLayoutItems.removeAllViews();
     }
 
-    public void bottomSheet(BottomSheetDialog dialog,View vista){
-        dialog.setCancelable(true);
-        dialog.setContentView(vista);
-        gestureDetector = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
-            @Override
-            public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
-                // Detectar deslizamiento hacia arriba (swipe up)
-                if (e2.getY() < e1.getY()) { // Si el deslizamiento es hacia arriba
-                    dialog.show(); // Realizar acción
-                    return true;
-                }
-                return false;
-            }
-        });
-        View touchListenerView = findViewById(R.id.botonsheet);  // Este es un contenedor fuera del mapa
-        touchListenerView.setOnTouchListener((v, event) -> {
-            // Pasar el evento al GestureDetector para que maneje el deslizamiento
-            gestureDetector.onTouchEvent(event);
-            return true;
-        });
-    }
-
-
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
@@ -680,26 +679,90 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
 
-        apiService.getPuntosLimpios().enqueue(new Callback<PuntosLimpiosResponse>() {
-            @Override
-            public void onResponse(Call<PuntosLimpiosResponse> call, Response<PuntosLimpiosResponse> response) {
-                if (response.isSuccessful() && response.body() != null) {
+        if(modo == 1){
+            apiService.getFuentes().enqueue(new Callback<List<Fuentes>>() {
+                @Override
+                public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
+                    if (response.isSuccessful() && response.body() != null) {
+                        Log.e("Marcadores", "Cargando Localizacion" );
+                        List<Fuentes> fuentes = response.body();
+                        VaciarItems();
+                        for (Fuentes fuente : fuentes) {
+                            Location fuenteLocation = new Location("");
+                            fuenteLocation.setLatitude(fuente.getLatitud());
+                            fuenteLocation.setLongitude(fuente.getLongitud());
+                            String key = fuente.getLongitud()+" "+fuente.getLatitud();
+                            // Calcula la distancia entre el usuario y la fuente
+                            float distancia = userLocation.distanceTo(fuenteLocation);
+                            if (distancia <= RADIUS_METERS && cumpleFiltros(fuente)) {
+                                // Si ya existe el marcador, no lo agrega de nuevo
+                                if (!currentMarkersFuentes.containsKey(key)) {
+                                    currentMarkersFuentes.put(key, addMarker(fuente, fuente.getEstado()));
+                                }
+                                fuentesCercanas.add(fuente);
+                                InsertarItem(fuente);
+                            }
+                        }
+                    }
+                }
+                @Override
+                public void onFailure(Call<List<Fuentes>> call, Throwable t) {
+                    t.printStackTrace(); // Manejo de errores
+                }
+            });
+        } else if (modo == 2) {
+            apiService.getBancos().enqueue(new Callback<List<Bancos>>() {
+                @Override
+                public void onResponse(Call<List<Bancos>> call, Response<List<Bancos>> response) {
+                    if (response.isSuccessful() && response.body() != null) {
 
-                    Log.e("PuntosLimpios", "Cargando Localización");
-                    List<PuntosLimpios> puntos = response.body().puntos;
-                    Log.e("PuntosLimpios", "Cantidad recibida: " + puntos.size());
+                        Log.e("Bancos", "Cargando Localizacion" );
+                        List<Bancos> bancos = response.body();
+                        Log.e("Bancos", "Cantidad recibida: " + bancos.size());
+                        VaciarItems();
+                        for (Bancos banco : bancos) {
+                            Location bancoLocation = new Location("");
+                            bancoLocation.setLatitude(banco.getLatitud());
+                            bancoLocation.setLongitude(banco.getLongitud());
+                            String key = banco.getLongitud()+" "+banco.getLatitud();
+                            // Calcula la distancia entre el usuario y la fuente
+                            float distancia = userLocation.distanceTo(bancoLocation);
+                            if (distancia <= RADIUS_METERS_BANCOS) {
+                                // Si ya existe el marcador, no lo agrega de nuevo
+                                if (!currentMarkersBancos.containsKey(key)) {
+                                    currentMarkersBancos.put(key, addMarker(banco));
+                                }
+                            }
+                        }
+                    }
+                }
 
-                    VaciarItems(); // Si compartes función, asegúrate que no borra los bancos
+                @Override
+                public void onFailure(Call<List<Bancos>> call, Throwable t) {
 
-                    for (PuntosLimpios punto : puntos) {
-                        if (punto.location == null) continue;
+                }
+            });
+        }else{
+            apiService.getPuntosLimpios().enqueue(new Callback<PuntosLimpiosResponse>() {
+                @Override
+                public void onResponse(Call<PuntosLimpiosResponse> call, Response<PuntosLimpiosResponse> response) {
+                    if (response.isSuccessful() && response.body() != null) {
 
-                        Location puntoLocation = new Location("");
-                        puntoLocation.setLatitude(punto.location.latitude);
-                        puntoLocation.setLongitude(punto.location.longitude);
+                        Log.e("PuntosLimpios", "Cargando Localización");
+                        List<PuntosLimpios> puntos = response.body().puntos;
+                        Log.e("PuntosLimpios", "Cantidad recibida: " + puntos.size());
 
-                        String key = punto.location.longitude + " " + punto.location.latitude;
-                        currentMarkersPuntosLimpios.put(key, addMarker(punto));
+                        VaciarItems(); // Si compartes función, asegúrate que no borra los bancos
+
+                        for (PuntosLimpios punto : puntos) {
+                            if (punto.location == null) continue;
+
+                            Location puntoLocation = new Location("");
+                            puntoLocation.setLatitude(punto.location.latitude);
+                            puntoLocation.setLongitude(punto.location.longitude);
+
+                            String key = punto.location.longitude + " " + punto.location.latitude;
+                            currentMarkersPuntosLimpios.put(key, addMarker(punto));
                         /*
                         float distancia = userLocation.distanceTo(puntoLocation);
                         if (distancia <= RADIUS_METERS_PUNTOS_LIMPIOS) {
@@ -707,77 +770,20 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                                 currentMarkersPuntosLimpios.put(key, addMarker(punto));
                             }
                         }*/
-                    }
-                }
-            }
-
-            @Override
-            public void onFailure(Call<PuntosLimpiosResponse> call, Throwable t) {
-                Log.e("PuntosLimpios", "Error al cargar puntos limpios: " + t.getMessage());
-            }
-        });
-
-        apiService.getBancos().enqueue(new Callback<List<Bancos>>() {
-            @Override
-            public void onResponse(Call<List<Bancos>> call, Response<List<Bancos>> response) {
-                if (response.isSuccessful() && response.body() != null) {
-
-                    Log.e("Bancos", "Cargando Localizacion" );
-                    List<Bancos> bancos = response.body();
-                    Log.e("Bancos", "Cantidad recibida: " + bancos.size());
-                    VaciarItems();
-                    for (Bancos banco : bancos) {
-                        Location bancoLocation = new Location("");
-                        bancoLocation.setLatitude(banco.getLatitud());
-                        bancoLocation.setLongitude(banco.getLongitud());
-                        String key = banco.getLongitud()+" "+banco.getLatitud();
-                        // Calcula la distancia entre el usuario y la fuente
-                        float distancia = userLocation.distanceTo(bancoLocation);
-                        if (distancia <= RADIUS_METERS_BANCOS) {
-                            // Si ya existe el marcador, no lo agrega de nuevo
-                            if (!currentMarkersBancos.containsKey(key)) {
-                                currentMarkersBancos.put(key, addMarker(banco));
-                            }
                         }
                     }
                 }
-            }
 
-            @Override
-            public void onFailure(Call<List<Bancos>> call, Throwable t) {
-
-            }
-        });
-
-        apiService.getFuentes().enqueue(new Callback<List<Fuentes>>() {
-            @Override
-            public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    Log.e("Marcadores", "Cargando Localizacion" );
-                    List<Fuentes> fuentes = response.body();
-                    VaciarItems();
-                    for (Fuentes fuente : fuentes) {
-                        Location fuenteLocation = new Location("");
-                        fuenteLocation.setLatitude(fuente.getLatitud());
-                        fuenteLocation.setLongitude(fuente.getLongitud());
-                        String key = fuente.getLongitud()+" "+fuente.getLatitud();
-                        // Calcula la distancia entre el usuario y la fuente
-                        float distancia = userLocation.distanceTo(fuenteLocation);
-                        if (distancia <= RADIUS_METERS && cumpleFiltros(fuente)) {
-                            // Si ya existe el marcador, no lo agrega de nuevo
-                            if (!currentMarkersFuentes.containsKey(key)) {
-                                currentMarkersFuentes.put(key, addMarker(fuente, fuente.getEstado()));
-                            }
-                            fuentesCercanas.add(fuente);
-                            InsertarItem(fuente);
-                        }
-                    }
+                @Override
+                public void onFailure(Call<PuntosLimpiosResponse> call, Throwable t) {
+                    Log.e("PuntosLimpios", "Error al cargar puntos limpios: " + t.getMessage());
                 }
-            }
-            @Override
-            public void onFailure(Call<List<Fuentes>> call, Throwable t) {
-                t.printStackTrace(); // Manejo de errores
-            }
-        });
+            });
+        }
+
+
+
+
+
     }
 }
