@@ -3,9 +3,11 @@ package com.brunov.proyectointegrador;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
+import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.ImageView;
+import android.widget.TextView;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
@@ -13,7 +15,7 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
-public class SplashKVinn extends AppCompatActivity {
+public class MadSplash extends AppCompatActivity {
 
 
     @Override
@@ -21,14 +23,27 @@ public class SplashKVinn extends AppCompatActivity {
 
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
-        setContentView(R.layout.activity_splash_kvinn);
+        setContentView(R.layout.activity_mad_splash);
 
         openApp();
 
-        ImageView gota=findViewById(R.id.gota);
+        ImageView mark=findViewById(R.id.mark);
+        TextView m = findViewById(R.id.M);
+        TextView mad = findViewById(R.id.MAD);
+        TextView around = findViewById(R.id.around);
 
         Animation drop = AnimationUtils.loadAnimation(this,R.anim.drop);
-        gota.startAnimation(drop);
+        Animation letter1 = AnimationUtils.loadAnimation(this,R.anim.letters);
+
+        Animation letter2 = AnimationUtils.loadAnimation(this,R.anim.letters);
+        mark.startAnimation(drop);
+
+        new Handler().postDelayed(() -> {
+            m.setVisibility(View.VISIBLE);
+            around.setVisibility(View.VISIBLE);
+            m.startAnimation(letter1);
+            around.startAnimation(letter2);
+        },2000);
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
@@ -42,7 +57,7 @@ public class SplashKVinn extends AppCompatActivity {
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                Intent intent=new Intent(SplashKVinn.this, MainActivity.class);
+                Intent intent=new Intent(MadSplash.this, MainActivity.class);
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
                 startActivity(intent);

@@ -16,7 +16,7 @@
         android:theme="@style/Theme.ProyectoIntegrador"
         tools:targetApi="31">
         <activity
-            android:name=".SplashKVinn"
+            android:name=".MadSplash"
             android:exported="true"
             android:screenOrientation="portrait">
             <intent-filter>
@@ -34,8 +34,7 @@
 
         <meta-data
             android:name="preloaded_fonts"
-            android:resource="@array/preloaded_fonts"
-            />
+            android:resource="@array/preloaded_fonts" />
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyBVI-ZXP6rc6MBFWAJAaFGdL9GOrElRinU"/>
