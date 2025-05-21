@@ -74,8 +74,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private static final int RADIUS_METERS = 500; // Radio en metros (500 m)
     private FusedLocationProviderClient fusedLocationProviderClient;
 
-    private HashMap<String, Marker> currentMarkersFuentes = new HashMap<>();
-    private HashMap<String, Marker> currentMarkersBancos = new HashMap<>();
+    private HashMap<String, Marker> currentMarkers = new HashMap<>();
 
     private ArrayAdapter<String> adapter;
     private List<String> lista = new ArrayList<>();
@@ -228,7 +227,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             isSearching=true;
             barriosUnicos.clear();
             fuentesBusqueda.clear();
-            currentMarkersFuentes.clear();
+            currentMarkers.clear();
             lista.clear();
             searchView.setIconified(false);
             listView.setVisibility(View.VISIBLE);
@@ -281,7 +280,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                                 Map.clear();
                                 VaciarItems();
                                 fuentesBusqueda.clear();
-                                currentMarkersFuentes.clear();
+                                currentMarkers.clear();
                                 configureLocationUpdates();
                                 getDeviceLocation();
                             } else {
@@ -333,7 +332,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 t.printStackTrace();
             }
         });
-
     }
 
     private void fuentesDelMapa(List<Fuentes> fuente, String selectedItem) {
@@ -347,7 +345,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 LatLng latLng = new LatLng(fuentes.getLatitud(), fuentes.getLongitud());
                 String key = fuentes.getLatitud()+" "+fuentes.getLongitud();
                 fuentesBusqueda.add(fuentes);
-                currentMarkersFuentes.put(key, addMarker(fuentes,fuentes.getEstado()));
+                currentMarkers.put(key, addMarker(fuentes,fuentes.getEstado()));
                 boundsBuilder.include(latLng);
                 found = true;
                 InsertarItem(fuentes);
@@ -364,16 +362,16 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private void actualizarMarcadoresBusqueda() {
         Log.e("CurrentMarkerClear","Limpiado de marcadores Buscados");
-        currentMarkersFuentes.clear();
+        currentMarkers.clear();
         Map.clear();
-        currentMarkersFuentes = listaDeFuentes(fuentesBusqueda);
+        currentMarkers = listaDeFuentes(fuentesBusqueda);
     }
 
     private void actualizarMarcadoresLocalizacion(){
         Log.e("CurrentMarkerClear","Limpiado de marcadores Cercanos");
-        currentMarkersFuentes.clear();
+        currentMarkers.clear();
         Map.clear();
-        currentMarkersFuentes = listaDeFuentes(fuentesCercanas);
+        currentMarkers = listaDeFuentes(fuentesCercanas);
     }
 
     private HashMap<String, Marker> listaDeFuentes(List<Fuentes> fuente){
@@ -450,15 +448,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         .icon(getCustomMarker(R.drawable.markerclosed)));
                 break;
         }
-        return marker;
-    }
-    private Marker addMarker(Bancos banco){
-        LatLng latLng = new LatLng(banco.getLatitud(),banco.getLongitud());
-        Marker marker = Map.addMarker(new MarkerOptions()
-                        .position(latLng)
-                        .title(banco.getNomVia())
-                .icon(getCustomMarker(R.drawable.markeroperative)));
-
         return marker;
     }
 
@@ -665,40 +654,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         if(isSearching) return;
 
         ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
-        apiService.getBancos().enqueue(new Callback<List<Bancos>>() {
-            @Override
-            public void onResponse(Call<List<Bancos>> call, Response<List<Bancos>> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    Log.e("Bancos", "Cargando Localizacion" );
-                    List<Bancos> bancos = response.body();
-                    VaciarItems();
-                    for (Bancos banco : bancos) {
-                        Location fuenteLocation = new Location("");
-                        fuenteLocation.setLatitude(banco.getLatitud());
-                        fuenteLocation.setLongitude(banco.getLongitud());
-                        String key = banco.getLongitud()+" "+banco.getLatitud();
-                        currentMarkersBancos.put(key, addMarker(banco));
-                        Log.e("Banco", "Lat: " + banco.getLatitud() + " Long: " + banco.getLongitud());
-
-                        /*
-                        // Calcula la distancia entre el usuario y la fuente
-                        float distancia = userLocation.distanceTo(fuenteLocation);
-                        if (distancia <= RADIUS_METERS) {
-                            // Si ya existe el marcador, no lo agrega de nuevo
-                            if (!currentMarkersBancos.containsKey(key)) {
-                                currentMarkersBancos.put(key, addMarker(banco));
-                            }
-                        }*/
-                    }
-                }
-            }
-
-            @Override
-            public void onFailure(Call<List<Bancos>> call, Throwable t) {
-
-            }
-        });
-        /*
         apiService.getFuentes().enqueue(new Callback<List<Fuentes>>() {
             @Override
             public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
@@ -715,8 +670,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         float distancia = userLocation.distanceTo(fuenteLocation);
                         if (distancia <= RADIUS_METERS && cumpleFiltros(fuente)) {
                             // Si ya existe el marcador, no lo agrega de nuevo
-                            if (!currentMarkersFuentes.containsKey(key)) {
-                                currentMarkersFuentes.put(key, addMarker(fuente, fuente.getEstado()));
+                            if (!currentMarkers.containsKey(key)) {
+                                currentMarkers.put(key, addMarker(fuente, fuente.getEstado()));
                             }
                             fuentesCercanas.add(fuente);
                             InsertarItem(fuente);
@@ -728,6 +683,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             public void onFailure(Call<List<Fuentes>> call, Throwable t) {
                 t.printStackTrace(); // Manejo de errores
             }
-        });*/
+        });
     }
 }
