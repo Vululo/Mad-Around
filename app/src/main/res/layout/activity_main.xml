@@ -14,7 +14,8 @@
         android:id="@+id/map"
         android:name="com.google.android.gms.maps.SupportMapFragment"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+        />
 
     <androidx.appcompat.widget.SearchView
         android:id="@+id/busqueda"
@@ -43,7 +44,8 @@
             android:layout_height="40dp"
             android:layout_weight="1"
             android:layout_marginEnd="5dp"
-            android:background="@drawable/fuentes" />
+            android:background="@drawable/fuentes"
+            />
 
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/puntos_limpios_btn"
@@ -73,27 +75,6 @@
         android:visibility="gone"
         android:elevation="4dp" />
 
-    <!-- Botón flotante derecha arriba -->
-    <androidx.appcompat.widget.AppCompatButton
-        android:id="@+id/people"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:layout_below="@id/linear_layout"
-        android:layout_alignParentEnd="true"
-        android:layout_marginTop="16dp"
-        android:layout_marginEnd="24dp"
-        android:background="@drawable/people1" />
-
-    <!-- Botón flotante derecha medio -->
-    <androidx.appcompat.widget.AppCompatButton
-        android:id="@+id/pet"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:layout_below="@id/people"
-        android:layout_alignParentEnd="true"
-        android:layout_marginTop="12dp"
-        android:layout_marginEnd="24dp"
-        android:background="@drawable/paw1" />
 
     <!-- Botón flotante izquierda -->
     <androidx.appcompat.widget.AppCompatButton

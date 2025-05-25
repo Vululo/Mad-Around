@@ -70,7 +70,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private GoogleMap Map;
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
     private static final int RADIUS_METERS = 500; // Radio en metros (500 m)
-    private static final int RADIUS_METERS_BANCOS = 100; // Radio en metros (500 m)
+    private static final int RADIUS_METERS_BANCOS = 150; // Radio en metros (150 m)
     private int modo = 1;
     private FusedLocationProviderClient fusedLocationProviderClient;
 
@@ -93,6 +93,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     BottomSheetDialog dialog;
     private boolean found=false;
     private SearchView searchView;
+    private boolean cargado = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -109,8 +110,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
-        Button pet = findViewById(R.id.pet);
-        Button people = findViewById(R.id.people);
         Button available = null;
         Button maintenance = null;
         Button disabled = null;
@@ -122,19 +121,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         // Button click listeners
         center.setOnClickListener(view -> {getDeviceLocation();});
 
-        pet.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                toggleFiltro("MASCOTAS", pet, R.drawable.paw2, R.drawable.paw1,"Categoria");
-            }
-        });
-
-        people.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                toggleFiltro("PERSONAS", people, R.drawable.people2, R.drawable.people1,"Categoria");
-            }
-        });
         fuentes.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -443,12 +429,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         Map.setLatLngBoundsForCameraTarget(mapBounds);
         Map.setMinZoomPreference(10);
         Map.setMaxZoomPreference(17);
-
         // Deshabilitar el botón de ubicación del usuario
         Map.getUiSettings().setMyLocationButtonEnabled(false);
         // Solicitar permisos
         requestLocationPermission();
-
         configureLocationUpdates();
     }
 
@@ -680,6 +664,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
 
         if(modo == 1){
+
+            ocultar_marcadores(currentMarkersBancos);
+            ocultar_marcadores(currentMarkersPuntosLimpios);
+            mostrar_marcadores(currentMarkersFuentes);
+            Log.e("Control", "Modo de carga:"+modo);
+
             apiService.getFuentes().enqueue(new Callback<List<Fuentes>>() {
                 @Override
                 public void onResponse(Call<List<Fuentes>> call, Response<List<Fuentes>> response) {
@@ -711,6 +701,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 }
             });
         } else if (modo == 2) {
+
+            ocultar_marcadores(currentMarkersPuntosLimpios);
+            ocultar_marcadores(currentMarkersFuentes);
+            mostrar_marcadores(currentMarkersBancos);
+            Log.e("Control", "Modo de carga:"+modo);
             apiService.getBancos().enqueue(new Callback<List<Bancos>>() {
                 @Override
                 public void onResponse(Call<List<Bancos>> call, Response<List<Bancos>> response) {
@@ -719,7 +714,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         Log.e("Bancos", "Cargando Localizacion" );
                         List<Bancos> bancos = response.body();
                         Log.e("Bancos", "Cantidad recibida: " + bancos.size());
-                        VaciarItems();
+
+
                         for (Bancos banco : bancos) {
                             Location bancoLocation = new Location("");
                             bancoLocation.setLatitude(banco.getLatitud());
@@ -734,6 +730,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                                 }
                             }
                         }
+
                     }
                 }
 
@@ -742,48 +739,75 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                 }
             });
-        }else{
-            apiService.getPuntosLimpios().enqueue(new Callback<PuntosLimpiosResponse>() {
-                @Override
-                public void onResponse(Call<PuntosLimpiosResponse> call, Response<PuntosLimpiosResponse> response) {
-                    if (response.isSuccessful() && response.body() != null) {
+        } else if (modo == 3) {
+            ocultar_marcadores(currentMarkersBancos);
+            ocultar_marcadores(currentMarkersFuentes);
+            mostrar_marcadores(currentMarkersPuntosLimpios);
+            Log.e("Control", "Modo de carga:"+modo);
+            if(!cargado) {
+                apiService.getPuntosLimpios().enqueue(new Callback<PuntosLimpiosResponse>() {
+                    @Override
+                    public void onResponse(Call<PuntosLimpiosResponse> call, Response<PuntosLimpiosResponse> response) {
+                        if (response.isSuccessful() && response.body() != null) {
 
-                        Log.e("PuntosLimpios", "Cargando Localización");
-                        List<PuntosLimpios> puntos = response.body().puntos;
-                        Log.e("PuntosLimpios", "Cantidad recibida: " + puntos.size());
+                            Log.e("PuntosLimpios", "Cargando Localización");
+                            List<PuntosLimpios> puntos = response.body().puntos;
+                            Log.e("PuntosLimpios", "Cantidad recibida: " + puntos.size());
 
-                        VaciarItems(); // Si compartes función, asegúrate que no borra los bancos
+                            VaciarItems(); // Si compartes función, asegúrate que no borra los bancos
 
-                        for (PuntosLimpios punto : puntos) {
-                            if (punto.location == null) continue;
+                            for (PuntosLimpios punto : puntos) {
+                                if (punto.location == null) continue;
 
-                            Location puntoLocation = new Location("");
-                            puntoLocation.setLatitude(punto.location.latitude);
-                            puntoLocation.setLongitude(punto.location.longitude);
+                                Location puntoLocation = new Location("");
+                                puntoLocation.setLatitude(punto.location.latitude);
+                                puntoLocation.setLongitude(punto.location.longitude);
 
-                            String key = punto.location.longitude + " " + punto.location.latitude;
-                            currentMarkersPuntosLimpios.put(key, addMarker(punto));
-                        /*
-                        float distancia = userLocation.distanceTo(puntoLocation);
-                        if (distancia <= RADIUS_METERS_PUNTOS_LIMPIOS) {
-                            if (!currentMarkersPuntosLimpios.containsKey(key)) {
+                                String key = punto.location.longitude + " " + punto.location.latitude;
                                 currentMarkersPuntosLimpios.put(key, addMarker(punto));
                             }
-                        }*/
+                            cargado = true;
                         }
                     }
-                }
 
-                @Override
-                public void onFailure(Call<PuntosLimpiosResponse> call, Throwable t) {
-                    Log.e("PuntosLimpios", "Error al cargar puntos limpios: " + t.getMessage());
-                }
-            });
+                    @Override
+                    public void onFailure(Call<PuntosLimpiosResponse> call, Throwable t) {
+                        Log.e("PuntosLimpios", "Error al cargar puntos limpios: " + t.getMessage());
+                    }
+                });
+            }
+        }
+    }
+
+    public void ocultar_marcadores(HashMap<String, Marker> markerMap){
+        for (Marker marker : markerMap.values()) {
+            marker.setVisible(false);
+        }
+    }
+    public void mostrar_marcadores(HashMap<String, Marker> markerMap){
+        for (Marker marker : markerMap.values()) {
+            marker.setVisible(true);
+        }
+    }
+
+    private void ajustarCamara(HashMap<String, Marker> markerMap) {
+        if (markerMap == null || markerMap.isEmpty()) return;
+
+        LatLngBounds.Builder builder = new LatLngBounds.Builder();
+        boolean tieneMarcadoresVisibles = false;
+
+        for (Marker marker : markerMap.values()) {
+            if (marker != null && marker.isVisible()) {
+                builder.include(marker.getPosition());
+                tieneMarcadoresVisibles = true;
+            }
         }
 
+        if (!tieneMarcadoresVisibles) return;
 
-
-
-
+        LatLngBounds bounds = builder.build();
+        int padding = 100; // espacio en px alrededor del borde del mapa
+        Map.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, padding));
     }
+
 }

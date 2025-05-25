@@ -9,7 +9,7 @@ android {
     defaultConfig {
         applicationId = "com.brunov.proyectointegrador"
         minSdk = 24
-        targetSdk = 33
+        targetSdk = 34
         versionCode = 5
         versionName = "2.0"
 
