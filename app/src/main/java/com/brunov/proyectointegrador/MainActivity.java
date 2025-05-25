@@ -1,15 +1,20 @@
 package com.brunov.proyectointegrador;
 
+import android.content.Context;
+import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
 import android.location.Location;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -115,6 +120,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         Button disabled = findViewById(R.id.disabled);
         Button center = findViewById(R.id.center);
 
+        if (!isConnectedToInternet()) {
+            showNoInternetDialog();
+        }
+
         // Button click listeners
         center.setOnClickListener(view -> {getDeviceLocation();});
 
@@ -156,6 +165,34 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
+    }
+
+    public boolean isConnectedToInternet() {
+        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        if (connectivityManager != null) {
+            NetworkInfo networkInfo = connectivityManager.getActiveNetworkInfo();
+            return networkInfo != null && networkInfo.isConnected();
+        }
+        return false;
+    }
+
+    private void showNoInternetDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("Sin conexión a Internet")
+                .setMessage("Esta aplicación requiere conexión a Internet. ¿Deseas intentar conectarte?")
+                .setCancelable(false)
+                .setPositiveButton("Reintentar", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        // Reinicia la actividad para volver a comprobar la conexión
+                        recreate();
+                    }
+                })
+                .setNegativeButton("Salir", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        finishAffinity(); // Cierra la app completamente
+                    }
+                })
+                .show();
     }
 
     // Método para manejar los estados de las fuentes
