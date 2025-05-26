@@ -36,14 +36,24 @@ public class MadSplash extends AppCompatActivity {
         Animation letter1 = AnimationUtils.loadAnimation(this,R.anim.letters);
 
         Animation letter2 = AnimationUtils.loadAnimation(this,R.anim.letters);
+
+        Animation letter3 = AnimationUtils.loadAnimation(this,R.anim.around);
         mark.startAnimation(drop);
 
         new Handler().postDelayed(() -> {
             m.setVisibility(View.VISIBLE);
-            around.setVisibility(View.VISIBLE);
             m.startAnimation(letter1);
-            around.startAnimation(letter2);
+
+            mad.setVisibility(View.VISIBLE);
+            mad.startAnimation(letter2);
+
         },2000);
+
+        new Handler().postDelayed(() ->{
+
+            around.setVisibility(View.VISIBLE);
+            around.startAnimation(letter3);
+        },3000);
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
