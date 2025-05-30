@@ -71,7 +71,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
     private static final int RADIUS_METERS = 500; // Radio en metros (500 m)
     private static final int RADIUS_METERS_BANCOS = 150; // Radio en metros (150 m)
-    private int modo = 1;
+    private int estadoActual = 1;
     private FusedLocationProviderClient fusedLocationProviderClient;
 
     private HashMap<String, Marker> currentMarkersFuentes = new HashMap<>();
@@ -94,12 +94,16 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private boolean found=false;
     private SearchView searchView;
     private boolean cargado = false;
+    Button puntosLimpios;
+    Button fuentes;
+    Button bancos;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
+
 
         BarraDeBusqueda();
 
@@ -110,36 +114,43 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
-        Button available = null;
-        Button maintenance = null;
-        Button disabled = null;
-        Button puntosLimpios = findViewById(R.id.puntos_limpios_btn);
-        Button fuentes = findViewById(R.id.fuentes_btn);
-        Button bancos = findViewById(R.id.bancos_btn);
+        Button available;
+        Button maintenance;
+        Button disabled;
+        puntosLimpios = findViewById(R.id.puntos_limpios_btn);
+        fuentes = findViewById(R.id.fuentes_btn);
+        bancos = findViewById(R.id.bancos_btn);
         Button center = findViewById(R.id.center);
 
+        actualizarBotones();
         // Button click listeners
         center.setOnClickListener(view -> {getDeviceLocation();});
 
         fuentes.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                modo = 1;
+                cambiarEstado(1);
+                actualizarBotones();
                 getDeviceLocation();
+                ajustarCamara(currentMarkersFuentes);
             }
         });
         bancos.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                modo = 2;
+                cambiarEstado(2);
+                actualizarBotones();
                 getDeviceLocation();
+                ajustarCamara(currentMarkersBancos);
             }
         });
         puntosLimpios.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                modo = 3;
+                cambiarEstado(3);
+                actualizarBotones();
                 getDeviceLocation();
+                ajustarCamara(currentMarkersPuntosLimpios);
             }
         });
 
@@ -169,6 +180,17 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             return insets;
         });
     }
+
+    private void cambiarEstado(int nuevoEstado) {
+        estadoActual = nuevoEstado;
+        actualizarBotones();
+    }
+    private void actualizarBotones() {
+        fuentes.setBackgroundResource(estadoActual == 1 ? R.drawable.fuentes : R.drawable.fuentes_seleccionada);
+        bancos.setBackgroundResource(estadoActual == 2 ? R.drawable.bancos_asientos : R.drawable.bancos_asientos_seleccionado);
+        puntosLimpios.setBackgroundResource(estadoActual == 3 ? R.drawable.puntos_limpios : R.drawable.puntos_limpios_seleccionado);
+    }
+
 
     // Método para manejar los estados de las fuentes
     private void toggleFiltro(String filtro, Button button, int activeDrawable, int inactiveDrawable,String tipo) {
@@ -428,7 +450,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         );
         Map.setLatLngBoundsForCameraTarget(mapBounds);
         Map.setMinZoomPreference(10);
-        Map.setMaxZoomPreference(17);
         // Deshabilitar el botón de ubicación del usuario
         Map.getUiSettings().setMyLocationButtonEnabled(false);
         // Solicitar permisos
@@ -663,12 +684,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
 
-        if(modo == 1){
+        if(estadoActual == 1){
 
             ocultar_marcadores(currentMarkersBancos);
             ocultar_marcadores(currentMarkersPuntosLimpios);
             mostrar_marcadores(currentMarkersFuentes);
-            Log.e("Control", "Modo de carga:"+modo);
 
             apiService.getFuentes().enqueue(new Callback<List<Fuentes>>() {
                 @Override
@@ -700,12 +720,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     t.printStackTrace(); // Manejo de errores
                 }
             });
-        } else if (modo == 2) {
+        } else if (estadoActual == 2) {
 
             ocultar_marcadores(currentMarkersPuntosLimpios);
             ocultar_marcadores(currentMarkersFuentes);
             mostrar_marcadores(currentMarkersBancos);
-            Log.e("Control", "Modo de carga:"+modo);
             apiService.getBancos().enqueue(new Callback<List<Bancos>>() {
                 @Override
                 public void onResponse(Call<List<Bancos>> call, Response<List<Bancos>> response) {
@@ -739,11 +758,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                 }
             });
-        } else if (modo == 3) {
+        } else if (estadoActual == 3) {
             ocultar_marcadores(currentMarkersBancos);
             ocultar_marcadores(currentMarkersFuentes);
             mostrar_marcadores(currentMarkersPuntosLimpios);
-            Log.e("Control", "Modo de carga:"+modo);
             if(!cargado) {
                 apiService.getPuntosLimpios().enqueue(new Callback<PuntosLimpiosResponse>() {
                     @Override
