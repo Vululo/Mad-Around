@@ -1,15 +1,20 @@
 package com.brunov.proyectointegrador;
 
+import android.content.Context;
+import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
 import android.location.Location;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -122,6 +127,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         bancos = findViewById(R.id.bancos_btn);
         Button center = findViewById(R.id.center);
 
+        if (!isConnectedToInternet()) {
+            showNoInternetDialog();
+        }
+
         actualizarBotones();
         // Button click listeners
         center.setOnClickListener(view -> {getDeviceLocation();});
@@ -181,6 +190,33 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         });
     }
 
+    public boolean isConnectedToInternet() {
+        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        if (connectivityManager != null) {
+            NetworkInfo networkInfo = connectivityManager.getActiveNetworkInfo();
+            return networkInfo != null && networkInfo.isConnected();
+        }
+        return false;
+    }
+
+    private void showNoInternetDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("Sin conexión a Internet")
+                .setMessage("Esta aplicación requiere conexión a Internet. ¿Deseas intentar conectarte?")
+                .setCancelable(false)
+                .setPositiveButton("Reintentar", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        // Reinicia la actividad para volver a comprobar la conexión
+                        recreate();
+                    }
+                })
+                .setNegativeButton("Salir", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        finishAffinity(); // Cierra la app completamente
+                    }
+                })
+                .show();
+    }
     private void cambiarEstado(int nuevoEstado) {
         estadoActual = nuevoEstado;
         actualizarBotones();
@@ -190,8 +226,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         bancos.setBackgroundResource(estadoActual == 2 ? R.drawable.bancos_asientos : R.drawable.bancos_asientos_seleccionado);
         puntosLimpios.setBackgroundResource(estadoActual == 3 ? R.drawable.puntos_limpios : R.drawable.puntos_limpios_seleccionado);
     }
-
-
     // Método para manejar los estados de las fuentes
     private void toggleFiltro(String filtro, Button button, int activeDrawable, int inactiveDrawable,String tipo) {
         switch(tipo){
