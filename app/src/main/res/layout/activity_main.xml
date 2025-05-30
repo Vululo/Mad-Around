@@ -7,113 +7,83 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
+    <!-- Mapa de fondo -->
+
+    <!-- Barra de búsqueda -->
     <fragment
         android:id="@+id/map"
         android:name="com.google.android.gms.maps.SupportMapFragment"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
-
-    <androidx.appcompat.widget.AppCompatButton
-        android:id="@+id/botonsheet"
-        android:layout_width="250dp"
-        android:layout_height="45dp"
-        android:layout_alignParentStart="true"
-        android:layout_alignParentEnd="true"
-        android:layout_alignParentBottom="true"
-        android:background="@drawable/bottom_sheet"/>
+        android:layout_height="match_parent"
+        />
 
     <androidx.appcompat.widget.SearchView
         android:id="@+id/busqueda"
-        style="@style/barrabusqueda"
-        app:queryHint="Busqueda aqui"
-        />
-
-    <ListView
-        android:id="@+id/lista"
-        android:layout_width="370dp"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/busqueda"
-        android:layout_alignParentStart="true"
-        android:layout_alignParentEnd="true"
-        android:layout_marginStart="21dp"
-        android:layout_marginEnd="21dp"
-        android:background="@color/white"
-        android:visibility="gone"
-        android:elevation="5dp"/>
-
-    <HorizontalScrollView
-        android:id="@+id/horizontalScrollView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/busqueda"
-        android:fillViewport="true"
-        android:scrollbars="none">
+        android:layout_alignParentTop="true"
+        android:layout_margin="12dp"
+        android:background="@drawable/fondobarra"
+        android:elevation="8dp"
+        app:queryHint="Búsqueda aquí" />
 
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:padding="6dp">
+    <!-- Scroll horizontal con filtros -->
 
-            <androidx.appcompat.widget.AppCompatButton
-                android:id="@+id/available"
-                android:layout_width="130dp"
-                android:layout_height="42dp"
-                android:layout_alignParentEnd="true"
-                android:layout_marginTop="8dp"
-                android:layout_marginEnd="12dp"
-                android:background="@drawable/enabled1tag" />
-
-            <androidx.appcompat.widget.AppCompatButton
-                android:id="@+id/maintenance"
-                android:layout_width="155dp"
-                android:layout_height="42dp"
-                android:layout_marginTop="8dp"
-                android:layout_marginEnd="12dp"
-                android:layout_toStartOf="@+id/available"
-                android:background="@drawable/maintenance1tag" />
-
-            <androidx.appcompat.widget.AppCompatButton
-                android:id="@+id/disabled"
-                android:layout_width="150dp"
-                android:layout_height="42dp"
-                android:layout_marginTop="8dp"
-                android:layout_marginEnd="12dp"
-                android:layout_toStartOf="@+id/maintenance"
-                android:background="@drawable/disabled1tag" />
-
-            <!-- Agrega más botones aquí -->
-
-        </LinearLayout>
-    </HorizontalScrollView>
-
-    <androidx.appcompat.widget.AppCompatButton
-        android:id="@+id/people"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
+    <LinearLayout
+        android:id="@+id/linear_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:layout_below="@+id/busqueda"
-        android:layout_alignParentEnd="true"
-        android:layout_marginTop="75dp"
-        android:layout_marginEnd="24dp"
-        android:background="@drawable/people1" />
+        android:layout_marginTop="1dp"
+        android:orientation="horizontal"
+        android:padding="6dp">
 
-    <androidx.appcompat.widget.AppCompatButton
-        android:id="@+id/pet"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:layout_below="@+id/people"
-        android:layout_alignParentEnd="true"
-        android:layout_marginTop="12dp"
-        android:layout_marginEnd="24dp"
-        android:background="@drawable/paw1" />
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/fuentes_btn"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="5dp"
+            android:background="@drawable/fuentes"
+            />
 
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/puntos_limpios_btn"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="5dp"
+            android:background="@drawable/puntos_limpios" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/bancos_btn"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:background="@drawable/bancos_asientos" />
+    </LinearLayout>
+
+    <!-- Lista de resultados -->
+    <ListView
+        android:id="@+id/lista"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/linear_layout"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="8dp"
+        android:background="@color/white"
+        android:visibility="gone"
+        android:elevation="4dp" />
+
+
+    <!-- Botón flotante izquierda -->
     <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/center"
         android:layout_width="48dp"
         android:layout_height="48dp"
-        android:layout_below="@+id/busqueda"
+        android:layout_below="@id/linear_layout"
         android:layout_alignParentStart="true"
+        android:layout_marginTop="16dp"
         android:layout_marginStart="24dp"
-        android:layout_marginTop="75dp"
         android:background="@drawable/center" />
 </RelativeLayout>
