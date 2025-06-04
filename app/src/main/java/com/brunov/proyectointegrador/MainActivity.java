@@ -1,5 +1,6 @@
 package com.brunov.proyectointegrador;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
@@ -16,6 +17,7 @@ import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.cardview.widget.CardView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
@@ -42,11 +44,9 @@ import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.Task;
-import com.google.android.material.bottomsheet.BottomSheetDialog;
 
 import android.Manifest;
 import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
 import android.view.ViewGroup;
@@ -94,14 +94,16 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     boolean isSearching=false;
 
-    private LinearLayout linearLayoutItems;
-    BottomSheetDialog dialog;
-    private boolean found=false;
+    //private LinearLayout linearLayoutItems;
     private SearchView searchView;
+    private CardView cardView;
+    private Button exit;
+    private TextView tipocard, localizacioncard, distanciacard;
     private boolean cargado = false;
-    Button puntosLimpios;
-    Button fuentes;
-    Button bancos;
+    private Location location;
+    Button puntosLimpios_btn;
+    Button fuentes_btn;
+    Button bancos_btn;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -109,22 +111,26 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
-
         BarraDeBusqueda();
-
-        View vista = LayoutInflater.from(getApplicationContext()).inflate(R.layout.bottom_sheet_dialog, null);
-        linearLayoutItems = vista.findViewById(R.id.linearLayoutItems);
-        dialog = new BottomSheetDialog(MainActivity.this);
 
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+
         Button available;
         Button maintenance;
         Button disabled;
-        puntosLimpios = findViewById(R.id.puntos_limpios_btn);
-        fuentes = findViewById(R.id.fuentes_btn);
-        bancos = findViewById(R.id.bancos_btn);
+
+        puntosLimpios_btn = findViewById(R.id.puntos_limpios_btn);
+        fuentes_btn = findViewById(R.id.fuentes_btn);
+        bancos_btn = findViewById(R.id.bancos_btn);
+
+        cardView = findViewById(R.id.carddata);
+        exit = findViewById(R.id.salir);
+        tipocard = findViewById(R.id.tipo);
+        localizacioncard = findViewById(R.id.localizacion);
+        distanciacard = findViewById(R.id.distancia);
+
         Button center = findViewById(R.id.center);
 
         if (!isConnectedToInternet()) {
@@ -135,31 +141,44 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         // Button click listeners
         center.setOnClickListener(view -> {getDeviceLocation();});
 
-        fuentes.setOnClickListener(new View.OnClickListener() {
+        exit.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                cardView.setVisibility(View.GONE);
+            }
+        });
+
+        fuentes_btn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 cambiarEstado(1);
                 actualizarBotones();
                 getDeviceLocation();
                 ajustarCamara(currentMarkersFuentes);
+                cardView.setVisibility(View.INVISIBLE);
+                cargado=false;
             }
         });
-        bancos.setOnClickListener(new View.OnClickListener() {
+        bancos_btn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 cambiarEstado(2);
                 actualizarBotones();
                 getDeviceLocation();
                 ajustarCamara(currentMarkersBancos);
+                cardView.setVisibility(View.INVISIBLE);
+                cargado=false;
             }
         });
-        puntosLimpios.setOnClickListener(new View.OnClickListener() {
+        puntosLimpios_btn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 cambiarEstado(3);
                 actualizarBotones();
                 getDeviceLocation();
                 ajustarCamara(currentMarkersPuntosLimpios);
+                cardView.setVisibility(View.INVISIBLE);
+                cargado=false;
             }
         });
 
@@ -189,6 +208,37 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             return insets;
         });
     }
+
+    private void actualizarCardConMarcadorMasCercano(HashMap<String,Marker> marcadoresMap,String tipo) {
+        if (marcadoresMap == null || marcadoresMap.isEmpty()) return;
+
+        Marker marcadorMasCercano = null;
+        Location markerLocation;
+        int results=1000000;
+        int distanceInMeters;
+        for (Marker marker : marcadoresMap.values()) {
+
+            markerLocation = new Location("");
+            markerLocation.setLatitude(marker.getPosition().latitude);
+            markerLocation.setLongitude(marker.getPosition().longitude);
+
+
+            distanceInMeters = (int) location.distanceTo(markerLocation);
+            if (results > distanceInMeters) {
+                results=distanceInMeters;
+                marcadorMasCercano = marker;
+            }
+        }
+
+        if (marcadorMasCercano != null) {
+            // Actualizar el CardView
+            cardView.setVisibility(View.VISIBLE);
+            tipocard.setText(tipo);
+            distanciacard.setText("Distancia: "+results+"m");
+            localizacioncard.setText("Localización: "+marcadorMasCercano.getTitle()); // o cualquier info asociada
+        }
+    }
+
 
     public boolean isConnectedToInternet() {
         ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -222,9 +272,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         actualizarBotones();
     }
     private void actualizarBotones() {
-        fuentes.setBackgroundResource(estadoActual == 1 ? R.drawable.fuentes : R.drawable.fuentes_seleccionada);
-        bancos.setBackgroundResource(estadoActual == 2 ? R.drawable.bancos_asientos : R.drawable.bancos_asientos_seleccionado);
-        puntosLimpios.setBackgroundResource(estadoActual == 3 ? R.drawable.puntos_limpios : R.drawable.puntos_limpios_seleccionado);
+        fuentes_btn.setBackgroundResource(estadoActual == 1 ? R.drawable.fuentes : R.drawable.fuentes_seleccionada);
+        bancos_btn.setBackgroundResource(estadoActual == 2 ? R.drawable.bancos_asientos : R.drawable.bancos_asientos_seleccionado);
+        puntosLimpios_btn.setBackgroundResource(estadoActual == 3 ? R.drawable.puntos_limpios : R.drawable.puntos_limpios_seleccionado);
     }
     // Método para manejar los estados de las fuentes
     private void toggleFiltro(String filtro, Button button, int activeDrawable, int inactiveDrawable,String tipo) {
@@ -474,6 +524,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         return estadoCoincide && categoriaCoincide;
     }
 
+    @SuppressLint("PotentialBehaviorOverride")
     @Override
     public void onMapReady(@NonNull GoogleMap googleMap) {
         Log.i("Ready", "onMapReady");
@@ -484,14 +535,68 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         );
         Map.setLatLngBoundsForCameraTarget(mapBounds);
         Map.setMinZoomPreference(10);
+
         // Deshabilitar el botón de ubicación del usuario
         Map.getUiSettings().setMyLocationButtonEnabled(false);
+        Map.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
+            @SuppressLint("PotentialBehaviorOverride")
+            @Override
+            public boolean onMarkerClick(@NonNull Marker marker) {
+                String tag= (String) marker.getTag();
+                Location markerLocation;
+                int distanceInMeters;
+                switch (tag){
+                    case "fuente":
+                        cardView.setVisibility(View.VISIBLE);
+                        markerLocation = new Location("");
+                        markerLocation.setLatitude(marker.getPosition().latitude);
+                        markerLocation.setLongitude(marker.getPosition().longitude);
+
+                        distanceInMeters = (int) location.distanceTo(markerLocation);
+
+                        localizacioncard.setText("Localizacion: "+marker.getTitle());
+                        distanciacard.setText("Distancia: "+distanceInMeters+"m");
+                        tipocard.setText("Fuente de agua");
+                        break;
+
+                    case "banco":
+                        cardView.setVisibility(View.VISIBLE);
+                        markerLocation = new Location("");
+                        markerLocation.setLatitude(marker.getPosition().latitude);
+                        markerLocation.setLongitude(marker.getPosition().longitude);
+
+                        distanceInMeters = (int) location.distanceTo(markerLocation);
+
+                        localizacioncard.setText("Localizacion: "+marker.getTitle());
+                        distanciacard.setText("Distancia: "+distanceInMeters+"m");
+                        tipocard.setText("Banco / Asiento");
+                        break;
+
+                    case "punto":
+                        cardView.setVisibility(View.VISIBLE);
+                        markerLocation = new Location("");
+                        markerLocation.setLatitude(marker.getPosition().latitude);
+                        markerLocation.setLongitude(marker.getPosition().longitude);
+
+                        distanceInMeters = (int) location.distanceTo(markerLocation);
+
+                        localizacioncard.setText("Descripción: "+marker.getTitle());
+                        distanciacard.setText("Distancia: "+distanceInMeters+"m");
+                        tipocard.setText("Punto Limpio");
+                        break;
+                }
+
+                return true;
+            }
+        });
         // Solicitar permisos
         requestLocationPermission();
         configureLocationUpdates();
+
+
     }
 
-    private Marker addMarker(Fuentes fuente,String estado){
+    private Marker addMarker(Fuentes fuente, String estado){
         LatLng latLng = new LatLng(fuente.getLatitud(), fuente.getLongitud());
         Marker marker = null;
         switch(estado){
@@ -514,6 +619,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         .icon(getCustomMarker(R.drawable.markerclosed)));
                 break;
         }
+        marker.setTag("fuente");
         return marker;
     }
     private Marker addMarker(Bancos banco){
@@ -522,17 +628,16 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         .position(latLng)
                         .title(banco.getNomVia())
                 .icon(getCustomMarker(R.drawable.markerbench)));
-
+        marker.setTag("banco");
         return marker;
     }
     private Marker addMarker(PuntosLimpios punto) {
         LatLng latLng = new LatLng(punto.location.latitude, punto.location.longitude);
-
         Marker marker = Map.addMarker(new MarkerOptions()
                 .position(latLng)
                 .title(punto.title)
                 .icon(getCustomMarker(R.drawable.markerpuntolimpio))); // Usa el ícono que prefieras
-
+        marker.setTag("punto");
         return marker;
     }
 
@@ -546,7 +651,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     if (task.isSuccessful() && task.getResult() != null) {
                         // Obtén la última ubicación conocida
 
-                        Location location = task.getResult();
+                        location = task.getResult();
                         LatLng userLocation = new LatLng(location.getLatitude(), location.getLongitude());
                         Log.i("DeviceLocation", "getDeviceLocation");
                         // Mueve la cámara al usuario
@@ -664,16 +769,15 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             // Aquí moverás el mapa al marcador con la latitud y longitud asociada
             LatLng location = new LatLng(fuente.getLatitud(),fuente.getLongitud());
             Map.moveCamera(CameraUpdateFactory.newLatLngZoom(location, 80));
-            dialog.dismiss();
             hideKeyboard(v);
         });
 
         // Añadir el contenedor al LinearLayout principal
-        linearLayoutItems.addView(newItemContainer);
+        //linearLayoutItems.addView(newItemContainer);
     }
 
     public void VaciarItems(){
-        linearLayoutItems.removeAllViews();
+//        linearLayoutItems.removeAllViews();
     }
 
     @Override
@@ -747,6 +851,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                                 InsertarItem(fuente);
                             }
                         }
+
+                        if(!cargado) {actualizarCardConMarcadorMasCercano(currentMarkersFuentes,"Fuente de agua");cargado = true;}
+
                     }
                 }
                 @Override
@@ -783,8 +890,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                                 }
                             }
                         }
-
                     }
+
+                    if(!cargado) { actualizarCardConMarcadorMasCercano(currentMarkersBancos,"Banco / Asiento"); cargado = true;;}
+
                 }
 
                 @Override
@@ -819,6 +928,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                                 currentMarkersPuntosLimpios.put(key, addMarker(punto));
                             }
                             cargado = true;
+                            actualizarCardConMarcadorMasCercano(currentMarkersPuntosLimpios,"Punto Limpio");
                         }
                     }
 
@@ -827,8 +937,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         Log.e("PuntosLimpios", "Error al cargar puntos limpios: " + t.getMessage());
                     }
                 });
+
             }
+
+
         }
+
     }
 
     public void ocultar_marcadores(HashMap<String, Marker> markerMap){
