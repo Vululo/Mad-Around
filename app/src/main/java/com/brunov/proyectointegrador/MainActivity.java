@@ -3,6 +3,7 @@ package com.brunov.proyectointegrador;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.Bitmap;
@@ -11,6 +12,7 @@ import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.Uri;
 import android.os.Bundle;
 
 import androidx.activity.EdgeToEdge;
@@ -82,7 +84,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private HashMap<String, Marker> currentMarkersFuentes = new HashMap<>();
     private HashMap<String, Marker> currentMarkersBancos = new HashMap<>();
     private HashMap<String, Marker> currentMarkersPuntosLimpios = new HashMap<>();
-
+    private double lat,lng;
 
     private ArrayAdapter<String> adapter;
     private List<String> lista = new ArrayList<>();
@@ -104,6 +106,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     Button puntosLimpios_btn;
     Button fuentes_btn;
     Button bancos_btn;
+    Button comollegar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -130,6 +133,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         tipocard = findViewById(R.id.tipo);
         localizacioncard = findViewById(R.id.localizacion);
         distanciacard = findViewById(R.id.distancia);
+        comollegar = findViewById(R.id.comollegar);
 
         Button center = findViewById(R.id.center);
 
@@ -145,6 +149,26 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             @Override
             public void onClick(View view) {
                 cardView.setVisibility(View.GONE);
+            }
+        });
+
+        comollegar.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                // URI de dirección de Google Maps
+                String uri = "google.navigation:q=" + lat + "," + lng + "&mode=w";
+
+                // Intent para abrir Google Maps
+                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
+                intent.setPackage("com.google.android.apps.maps");
+
+                // Comprobar si existe la app de Google Maps
+                if (intent.resolveActivity(getPackageManager()) != null) {
+                    startActivity(intent);
+                } else {
+                    Toast.makeText(getApplicationContext(), "Google Maps no está instalado", Toast.LENGTH_LONG).show();
+                }
             }
         });
 
@@ -217,7 +241,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         int results=1000000;
         int distanceInMeters;
         for (Marker marker : marcadoresMap.values()) {
-
             markerLocation = new Location("");
             markerLocation.setLatitude(marker.getPosition().latitude);
             markerLocation.setLongitude(marker.getPosition().longitude);
@@ -225,6 +248,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
             distanceInMeters = (int) location.distanceTo(markerLocation);
             if (results > distanceInMeters) {
+                lat=marker.getPosition().latitude;
+                lng=marker.getPosition().longitude;
                 results=distanceInMeters;
                 marcadorMasCercano = marker;
             }
@@ -248,6 +273,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
         return false;
     }
+
 
     private void showNoInternetDialog() {
         new AlertDialog.Builder(this)
@@ -545,43 +571,28 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 String tag= (String) marker.getTag();
                 Location markerLocation;
                 int distanceInMeters;
+
+                cardView.setVisibility(View.VISIBLE);
+                markerLocation = new Location("");
+                lat=marker.getPosition().latitude;
+                lng=marker.getPosition().longitude;
+                markerLocation.setLatitude(lat);
+                markerLocation.setLongitude(lng);
+                distanceInMeters = (int) location.distanceTo(markerLocation);
+
+                localizacioncard.setText("Localización: "+marker.getTitle());
+                distanciacard.setText("Distancia: "+distanceInMeters+"m");
+
                 switch (tag){
                     case "fuente":
-                        cardView.setVisibility(View.VISIBLE);
-                        markerLocation = new Location("");
-                        markerLocation.setLatitude(marker.getPosition().latitude);
-                        markerLocation.setLongitude(marker.getPosition().longitude);
-
-                        distanceInMeters = (int) location.distanceTo(markerLocation);
-
-                        localizacioncard.setText("Localizacion: "+marker.getTitle());
-                        distanciacard.setText("Distancia: "+distanceInMeters+"m");
                         tipocard.setText("Fuente de agua");
                         break;
 
                     case "banco":
-                        cardView.setVisibility(View.VISIBLE);
-                        markerLocation = new Location("");
-                        markerLocation.setLatitude(marker.getPosition().latitude);
-                        markerLocation.setLongitude(marker.getPosition().longitude);
-
-                        distanceInMeters = (int) location.distanceTo(markerLocation);
-
-                        localizacioncard.setText("Localizacion: "+marker.getTitle());
-                        distanciacard.setText("Distancia: "+distanceInMeters+"m");
                         tipocard.setText("Banco / Asiento");
                         break;
 
                     case "punto":
-                        cardView.setVisibility(View.VISIBLE);
-                        markerLocation = new Location("");
-                        markerLocation.setLatitude(marker.getPosition().latitude);
-                        markerLocation.setLongitude(marker.getPosition().longitude);
-
-                        distanceInMeters = (int) location.distanceTo(markerLocation);
-
-                        localizacioncard.setText("Descripción: "+marker.getTitle());
-                        distanciacard.setText("Distancia: "+distanceInMeters+"m");
                         tipocard.setText("Punto Limpio");
                         break;
                 }
