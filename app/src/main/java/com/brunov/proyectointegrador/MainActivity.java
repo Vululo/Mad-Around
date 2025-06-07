@@ -63,6 +63,7 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -112,6 +113,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     Button fuentes_btn;
     Button bancos_btn;
     Button comollegar;
+    ProgressBar progressBar;
+    View overlay;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -128,6 +132,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         Button available;
         Button maintenance;
         Button disabled;
+
+        progressBar = findViewById(R.id.progressBar);
+        overlay = findViewById(R.id.overlay);
 
         puntosLimpios_btn = findViewById(R.id.puntos_limpios_btn);
         fuentes_btn = findViewById(R.id.fuentes_btn);
@@ -180,6 +187,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         fuentes_btn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                overlay.setVisibility(View.VISIBLE);
+                progressBar.setVisibility(View.VISIBLE);
                 cambiarEstado(1);
                 actualizarBotones();
                 getDeviceLocation(true);
@@ -193,7 +202,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         bancos_btn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
+                overlay.setVisibility(View.VISIBLE);
+                progressBar.setVisibility(View.VISIBLE);
                 cambiarEstado(2);
                 actualizarBotones();
                 getDeviceLocation(true);
@@ -206,6 +216,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         puntosLimpios_btn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                overlay.setVisibility(View.VISIBLE);
+                progressBar.setVisibility(View.VISIBLE);
                 cambiarEstado(3);
                 actualizarBotones();
                 getDeviceLocation(true);
@@ -844,6 +856,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
 
+
         if(estadoActual == 1){
 
             ocultar_marcadores(currentMarkersBancos);
@@ -879,6 +892,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         if(ajustarCam){
                             ajustarCamara(currentMarkersFuentes);
                         }
+                        overlay.setVisibility(View.GONE);
+                        progressBar.setVisibility(View.GONE);
                     }
                 }
                 @Override
@@ -920,9 +935,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                             ajustarCamara(currentMarkersBancos);
                         }
                     }
-
                     if(!cargado) { actualizarCardConMarcadorMasCercano(currentMarkersBancos,"Banco / Asiento"); cargado = true;;}
-
+                    overlay.setVisibility(View.GONE);
+                    progressBar.setVisibility(View.GONE);
                 }
 
                 @Override
@@ -962,6 +977,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         if(ajustarCam){
                             ajustarCamara(currentMarkersPuntosLimpios);
                         }
+                        overlay.setVisibility(View.GONE);
+                        progressBar.setVisibility(View.GONE);
                     }
 
                     @Override
