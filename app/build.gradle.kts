@@ -10,8 +10,8 @@ android {
         applicationId = "com.brunov.proyectointegrador"
         minSdk = 24
         targetSdk = 34
-        versionCode = 5
-        versionName = "2.0"
+        versionCode = 6
+        versionName = "3.0"
 
     }
 
