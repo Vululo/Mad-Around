@@ -637,19 +637,19 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             case "OPERATIVO":
                 marker = Map.addMarker(new MarkerOptions()
                         .position(latLng)
-                        .title(fuente.getNomVia())
+                        .title(fuente.getNomVia()+"\nEstado: "+fuente.getEstado())
                         .icon(getCustomMarker(R.drawable.markeroperative)));
                 break;
             case "CERRADA_TEMPORALMENT":
                 marker = Map.addMarker(new MarkerOptions()
                         .position(latLng)
-                        .title(fuente.getNomVia())
+                        .title(fuente.getNomVia()+"\nEstado: "+fuente.getEstado())
                         .icon(getCustomMarker(R.drawable.markermaintenance)));
                 break;
             case "FUERA_DE_SERVICIO":
                 marker = Map.addMarker(new MarkerOptions()
                         .position(latLng)
-                        .title(fuente.getNomVia())
+                        .title(fuente.getNomVia()+"\nEstado: "+fuente.getEstado())
                         .icon(getCustomMarker(R.drawable.markerclosed)));
                 break;
         }

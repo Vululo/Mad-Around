@@ -34,11 +34,11 @@ public class PantallaCarga extends AppCompatActivity {
         Animation carga2 = AnimationUtils.loadAnimation(this,R.anim.carga);
 
         mark.startAnimation(carga);
+
         new Handler().postDelayed(() ->{
             m.setVisibility(View.VISIBLE);
             m.startAnimation(carga2);
         },2000);
-
 
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
