@@ -32,7 +32,7 @@ public class MadSplash extends AppCompatActivity {
         TextView mad = findViewById(R.id.MAD);
         TextView around = findViewById(R.id.around);
 
-        Animation drop = AnimationUtils.loadAnimation(this,R.anim.drop);
+        Animation drop = AnimationUtils.loadAnimation(this,R.anim.icon);
         Animation letter1 = AnimationUtils.loadAnimation(this,R.anim.letters);
 
         Animation letter2 = AnimationUtils.loadAnimation(this,R.anim.letters);
