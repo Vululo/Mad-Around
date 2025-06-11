@@ -42,7 +42,7 @@ Localiza rápidamente fuentes por barrios a través de un buscador integrado.
 
 <img src="img/Busqueda1.jpg" alt="Busqueda" style="width:200px; height:auto;">
 
-## 💚 ¿Por qué usar Fontway?
+## 💚 ¿Por qué usar Mad Around?
 
 - Encuentra dónde descansar con bancos públicos.
 - Hidrátate gratuitamente en fuentes disponibles.
