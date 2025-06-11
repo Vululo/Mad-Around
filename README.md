@@ -1,4 +1,4 @@
-# Fontway
+# Mad Around
 
 Una aplicación para descubrir fuentes públicas, bancos y puntos limpios en la ciudad de Madrid de forma rápida, práctica y sostenible.
 
@@ -42,7 +42,7 @@ Localiza rápidamente fuentes por barrios a través de un buscador integrado.
 
 <img src="img/Busqueda1.jpg" alt="Busqueda" style="width:200px; height:auto;">
 
-## 💚 ¿Por qué usar Fontway?
+## 💚 ¿Por qué usar Mad Around?
 
 - Encuentra dónde descansar con bancos públicos.
 - Hidrátate gratuitamente en fuentes disponibles.
