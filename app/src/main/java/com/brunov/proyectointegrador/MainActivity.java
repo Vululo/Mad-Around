@@ -4,6 +4,8 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.Context;
+import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.Bitmap;
@@ -35,6 +37,7 @@ import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.Priority;
+import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -46,9 +49,11 @@ import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.Task;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 
 import android.Manifest;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
 import android.view.ViewGroup;
@@ -58,6 +63,7 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -107,6 +113,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     Button fuentes_btn;
     Button bancos_btn;
     Button comollegar;
+    ProgressBar progressBar;
+    View overlay;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -123,6 +132,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         Button available;
         Button maintenance;
         Button disabled;
+
+        progressBar = findViewById(R.id.progressBar);
+        overlay = findViewById(R.id.overlay);
 
         puntosLimpios_btn = findViewById(R.id.puntos_limpios_btn);
         fuentes_btn = findViewById(R.id.fuentes_btn);
@@ -143,7 +155,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         actualizarBotones();
         // Button click listeners
-        center.setOnClickListener(view -> {getDeviceLocation();});
+        center.setOnClickListener(view -> {getDeviceLocation(false);});
 
         exit.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -175,34 +187,45 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         fuentes_btn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                overlay.setVisibility(View.VISIBLE);
+                progressBar.setVisibility(View.VISIBLE);
                 cambiarEstado(1);
                 actualizarBotones();
-                getDeviceLocation();
+                getDeviceLocation(true);
                 ajustarCamara(currentMarkersFuentes);
                 cardView.setVisibility(View.INVISIBLE);
                 cargado=false;
+                getDeviceLocation(true);
+
             }
         });
         bancos_btn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                overlay.setVisibility(View.VISIBLE);
+                progressBar.setVisibility(View.VISIBLE);
                 cambiarEstado(2);
                 actualizarBotones();
-                getDeviceLocation();
+                getDeviceLocation(true);
                 ajustarCamara(currentMarkersBancos);
                 cardView.setVisibility(View.INVISIBLE);
                 cargado=false;
+
             }
         });
         puntosLimpios_btn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                overlay.setVisibility(View.VISIBLE);
+                progressBar.setVisibility(View.VISIBLE);
                 cambiarEstado(3);
                 actualizarBotones();
-                getDeviceLocation();
+                getDeviceLocation(true);
                 ajustarCamara(currentMarkersPuntosLimpios);
                 cardView.setVisibility(View.INVISIBLE);
                 cargado=false;
+                getDeviceLocation(true);
+
             }
         });
 
@@ -426,7 +449,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                                 fuentesBusqueda.clear();
                                 currentMarkersFuentes.clear();
                                 configureLocationUpdates();
-                                getDeviceLocation();
+                                getDeviceLocation(false);
                             } else {
                                 listView.setVisibility(View.VISIBLE);
                             }
@@ -614,19 +637,19 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             case "OPERATIVO":
                 marker = Map.addMarker(new MarkerOptions()
                         .position(latLng)
-                        .title(fuente.getNomVia())
+                        .title(fuente.getNomVia()+"\nEstado: "+fuente.getEstado())
                         .icon(getCustomMarker(R.drawable.markeroperative)));
                 break;
             case "CERRADA_TEMPORALMENT":
                 marker = Map.addMarker(new MarkerOptions()
                         .position(latLng)
-                        .title(fuente.getNomVia())
+                        .title(fuente.getNomVia()+"\nEstado: "+fuente.getEstado())
                         .icon(getCustomMarker(R.drawable.markermaintenance)));
                 break;
             case "FUERA_DE_SERVICIO":
                 marker = Map.addMarker(new MarkerOptions()
                         .position(latLng)
-                        .title(fuente.getNomVia())
+                        .title(fuente.getNomVia()+"\nEstado: "+fuente.getEstado())
                         .icon(getCustomMarker(R.drawable.markerclosed)));
                 break;
         }
@@ -653,7 +676,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
 
-    private void getDeviceLocation(){
+    private void getDeviceLocation(boolean ajustarCam){
         try{
             if(ContextCompat.checkSelfPermission(this,Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED){
                 Task<Location> locationResult = fusedLocationProviderClient.getLastLocation();
@@ -668,7 +691,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         // Mueve la cámara al usuario
                         Map.animateCamera(CameraUpdateFactory.newLatLngZoom(userLocation, 15));
 
-                        updateMapWithUserLocation(location);
+                        updateMapWithUserLocation(location, ajustarCam);
                     } else {
                         Toast.makeText(this, "No se pudo obtener la ubicación actual", Toast.LENGTH_SHORT).show();
                     }
@@ -684,7 +707,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 == PackageManager.PERMISSION_GRANTED) {
             Map.setMyLocationEnabled(true);
             Log.i("LocationEnabled", "enableUserLocation");
-            getDeviceLocation();
+            getDeviceLocation(false);
         }
 
     }
@@ -707,7 +730,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 enableUserLocation();
-                getDeviceLocation();
+                getDeviceLocation(false);
             }
         }
     }
@@ -817,7 +840,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             public void onLocationResult(@NonNull LocationResult locationResult) {
                 Location userLocation = locationResult.getLastLocation();
                 if (userLocation != null) {
-                    updateMapWithUserLocation(userLocation);
+                    updateMapWithUserLocation(userLocation,false);
                 }
             }
         };
@@ -828,10 +851,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     }
 
-    private void updateMapWithUserLocation(Location userLocation) {
+    private void updateMapWithUserLocation(Location userLocation,boolean ajustarCam) {
         if(isSearching) return;
 
         ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
+
 
         if(estadoActual == 1){
 
@@ -865,6 +889,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                         if(!cargado) {actualizarCardConMarcadorMasCercano(currentMarkersFuentes,"Fuente de agua");cargado = true;}
 
+                        if(ajustarCam){
+                            ajustarCamara(currentMarkersFuentes);
+                        }
+                        overlay.setVisibility(View.GONE);
+                        progressBar.setVisibility(View.GONE);
                     }
                 }
                 @Override
@@ -872,6 +901,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     t.printStackTrace(); // Manejo de errores
                 }
             });
+
         } else if (estadoActual == 2) {
 
             ocultar_marcadores(currentMarkersPuntosLimpios);
@@ -901,10 +931,13 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                                 }
                             }
                         }
+                        if(ajustarCam){
+                            ajustarCamara(currentMarkersBancos);
+                        }
                     }
-
                     if(!cargado) { actualizarCardConMarcadorMasCercano(currentMarkersBancos,"Banco / Asiento"); cargado = true;;}
-
+                    overlay.setVisibility(View.GONE);
+                    progressBar.setVisibility(View.GONE);
                 }
 
                 @Override
@@ -941,6 +974,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                             cargado = true;
                             actualizarCardConMarcadorMasCercano(currentMarkersPuntosLimpios,"Punto Limpio");
                         }
+                        if(ajustarCam){
+                            ajustarCamara(currentMarkersPuntosLimpios);
+                        }
+                        overlay.setVisibility(View.GONE);
+                        progressBar.setVisibility(View.GONE);
                     }
 
                     @Override
@@ -950,6 +988,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 });
 
             }
+            ajustarCamara(currentMarkersPuntosLimpios);
 
 
         }
@@ -971,20 +1010,22 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         if (markerMap == null || markerMap.isEmpty()) return;
 
         LatLngBounds.Builder builder = new LatLngBounds.Builder();
-        boolean tieneMarcadoresVisibles = false;
 
         for (Marker marker : markerMap.values()) {
-            if (marker != null && marker.isVisible()) {
-                builder.include(marker.getPosition());
-                tieneMarcadoresVisibles = true;
-            }
+            builder.include(marker.getPosition());
         }
 
-        if (!tieneMarcadoresVisibles) return;
+        try {
+            LatLngBounds bounds = builder.build();
+            int padding = 100; // margen en píxeles
 
-        LatLngBounds bounds = builder.build();
-        int padding = 100; // espacio en px alrededor del borde del mapa
-        Map.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, padding));
+            CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngBounds(bounds, padding);
+            Map.animateCamera(cameraUpdate);
+        } catch (IllegalStateException e) {
+            // Esto puede pasar si solo hay un marcador o todos están en la misma posición exacta
+            Marker unico = markerMap.values().iterator().next();
+            Map.animateCamera(CameraUpdateFactory.newLatLngZoom(unico.getPosition(), 15));
+        }
     }
 
 }
